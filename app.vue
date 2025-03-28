@@ -9,7 +9,9 @@
       </div>
     </header>
     <main>
-      <NuxtPage />
+      <UApp>
+        <NuxtPage />
+      </UApp>
     </main>
   </div>
 </template>

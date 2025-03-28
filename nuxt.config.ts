@@ -2,5 +2,9 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  modules: ['@nuxt/icon', '@nuxt/ui']
+  css: ['~/assets/css/main.css'],
+  modules: ['@nuxt/icon', '@nuxt/ui'],
+  ui: {
+    colorMode: false
+  }
 })
