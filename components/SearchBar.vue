@@ -6,7 +6,7 @@ function handleSearch() {
   emit('search', searchQuery.value)
 }
 
-const emit = defineEmits(['search'])
+const emit = defineEmits(['search']);
 </script>
 
 <template>
@@ -16,11 +16,11 @@ const emit = defineEmits(['search'])
         v-model="searchQuery"
         type="text"
         placeholder="Search jobs..."
-        class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-800 bg-white"
       />
       <button
         type="submit"
-        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        class="px-4 py-2 bg-blue-900 text-white rounded hover:bg-blue-950"
       >
         Search
       </button>

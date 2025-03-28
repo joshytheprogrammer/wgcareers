@@ -32,17 +32,17 @@ select {
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  -webkit-box-shadow: inset 0 0 2px #76dbff;
+  -webkit-box-shadow: inset 0 0 2px #344a9b;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #76dbff;
-  -webkit-box-shadow: inset 0 0 2px #76dbff;
+  background-color: #344a9b;
+  -webkit-box-shadow: inset 0 0 2px #344a9b;
 }
 
 ::selection {

@@ -31,7 +31,7 @@ function clearFilters() {
   <div class="max-w-7xl mx-auto px-4 py-8">
     <div class="mb-8 space-y-4">
       <SearchBar @search="term => searchTerm = term" />
-      <div class="flex gap-4 flex-wrap">
+      <div class="flex gap-4 flex-wrap ">
         <FilterLocation :locations="uniqueLocations" @select="selectedLocation = $event" />
         <FilterJobType :jobTypes="uniqueJobTypes" @select="selectedJobType = $event" />
         <button 
