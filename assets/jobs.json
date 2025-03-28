@@ -1,0 +1,43 @@
+{
+  "jobs": [
+    {
+      "id": 1,
+      "title": "Software Engineer",
+      "company": "Walls and Gates",
+      "location": "New York",
+      "type": "Full-time",
+      "descriptionSnippet": "Develop and maintain enterprise-level applications using modern technologies.",
+      "description": "We're seeking a skilled Software Engineer to join our team. You'll work on cutting-edge projects using technologies like Vue.js, Node.js, and AWS. Responsibilities include full-stack development, code reviews, and collaborating with cross-functional teams.",
+      "salary": "$120,000 - $150,000",
+      "requirements": ["Bachelor's in CS or related field", "3+ years experience", "Proficiency in JavaScript"],
+      "benefits": ["Health insurance", "401(k) matching", "Flexible hours"],
+      "applicationInstructions": "Submit your resume and cover letter through our online portal."
+    },
+    {
+      "id": 2,
+      "title": "UX Designer",
+      "company": "Walls and Gates",
+      "location": "Remote",
+      "type": "Contract",
+      "descriptionSnippet": "Create intuitive user experiences for our enterprise software solutions.",
+      "description": "We need a talented UX Designer to redesign our core product interfaces. You'll conduct user research, create wireframes, and collaborate with development teams to implement designs.",
+      "salary": "$80 - $120/hour",
+      "requirements": ["5+ years UX experience", "Strong portfolio", "Figma proficiency"],
+      "benefits": ["Remote work", "Flexible schedule"],
+      "applicationInstructions": "Email portfolio to design@wallsandgates.com"
+    },
+    {
+      "id": 3,
+      "title": "DevOps Engineer",
+      "company": "Walls and Gates",
+      "location": "San Francisco",
+      "type": "Full-time",
+      "descriptionSnippet": "Manage cloud infrastructure and CI/CD pipelines.",
+      "description": "Join our DevOps team to optimize AWS infrastructure and implement automated deployment processes. Terraform and Kubernetes experience required.",
+      "salary": "$140,000 - $170,000",
+      "requirements": ["AWS certification", "3+ years DevOps experience", "Kubernetes expertise"],
+      "benefits": ["Stock options", "Generous PTO", "Conference budget"],
+      "applicationInstructions": "Apply through LinkedIn or company website"
+    }
+  ]
+}
