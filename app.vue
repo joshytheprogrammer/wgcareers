@@ -14,5 +14,6 @@
         <NuxtPage />
       </UApp>
     </main>
+    <Footer />
   </div>
 </template>

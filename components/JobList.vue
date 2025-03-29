@@ -19,13 +19,13 @@ function generateSlug(title) {
   <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
     <div class="flex justify-between items-start">
       <div>
-        <h2 class="text-xl font-semibold mb-2">{{ job.title }}</h2>
+        <NuxtLink :to="`/jobs/${generateSlug(job.title)}`" class="text-xl hover:text-blue-700 font-semibold mb-2">{{ job.title }}</NuxtLink>
         <p class="text-gray-600 mb-2">{{ job.company }}</p>
         <div class="flex gap-2 text-sm mb-4">
           <span class="px-2 py-1 bg-gray-100 rounded">{{ job.location }}</span>
           <span class="px-2 py-1 bg-gray-100 rounded">{{ job.type }}</span>
         </div>
-        <p class="text-gray-700">{{ job.descriptionSnippet }}</p>
+        <p class="text-gray-700">{{ job.description_snippet }}</p>
       </div>
       <NuxtLink 
         :to="`/jobs/${generateSlug(job.title)}`"

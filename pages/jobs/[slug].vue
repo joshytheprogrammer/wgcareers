@@ -1,24 +1,34 @@
-// pages/jobs/[slug].vue
 <script setup>
+import { collection, query, where, getDocs } from 'firebase/firestore'
+const db = useFirestore()
 const route = useRoute()
 
-// Import jobs data directly from assets
-import jobsData from '~/assets/jobs.json'
+const job = ref(null)
+const error = ref('')
+const loading = ref(true)
 
-const job = computed(() => {
-  // Generate slug for comparison
-  return jobsData.jobs.find(j => 
-    generateSlug(j.title) === route.params.slug
-  )
-})
-
-// Enhanced slug generator to handle special characters
-function generateSlug(title) {
-  return title
-    .toLowerCase()
-    .replace(/ /g, '-')
-    .replace(/[^\w-]+/g, '')
-}
+onMounted(async () => {
+  try {
+    const q = query(
+      collection(db, 'jobs'),
+      where('slug', '==', route.params.slug)
+    )
+    
+    const querySnapshot = await getDocs(q)
+    
+    if (!querySnapshot.empty) {
+      // Get the first matching document (assuming slugs are unique)
+      const doc = querySnapshot.docs[0]
+      job.value = { id: doc.id, ...doc.data() }
+    } else {
+      error.value = 'Job not found'
+    }
+  } catch (err) {
+    error.value = 'Error loading job: ' + err.message
+  } finally {
+    loading.value = false
+  }
+});
 </script>
 
 <template>
@@ -37,7 +47,7 @@ function generateSlug(title) {
       <div class="space-y-6">
         <div>
           <h2 class="text-xl font-semibold mb-2">Description</h2>
-          <p class="text-gray-700 whitespace-pre-wrap">{{ job.description }}</p>
+          <div class="text-gray-700 list-disc" v-html="job.description_html"></div>
         </div>
         
         <div v-if="job.requirements">
@@ -56,7 +66,7 @@ function generateSlug(title) {
 
         <div>
           <h2 class="text-xl font-semibold mb-2">How to Apply</h2>
-          <p class="text-gray-700 whitespace-pre-wrap">{{ job.applicationInstructions }}</p>
+          <div class="prose-sm text-gray-700 whitespace-pre-wrap" v-html="job.application_instructions_html"></div>
         </div>
       </div>
     </div>

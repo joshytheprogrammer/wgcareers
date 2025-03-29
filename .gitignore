@@ -5,6 +5,8 @@
 .nitro
 .cache
 dist
+firebase_cert.json
+service-account.json
 
 # Node dependencies
 node_modules
@@ -22,3 +24,5 @@ logs
 .env
 .env.*
 !.env.example
+
+service-account.json
