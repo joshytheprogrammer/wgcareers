@@ -1,75 +1,38 @@
-# Nuxt Minimal Starter
+# Walls and Gates Careers Portal
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+![Walls and Gates Logo](https://via.placeholder.com/150x50?text=Walls+and+Gates)  
+*A modern job listings platform for Walls and Gates*
 
-## Setup
+## Features
 
-Make sure to install dependencies:
+- **Job Listings**: Beautifully displayed career opportunities
+- **Admin Panel**: Secure content management for staff
+- **Responsive Design**: Works on all devices
+- **Real-time Updates**: Instant job posting updates
+- **WYSIWYG Editor**: Rich text editing for job descriptions
+- **Authentication**: Secure staff login system
 
-```bash
-# npm
-npm install
+## Technologies Used
 
-# pnpm
-pnpm install
+- **Frontend**: Nuxt 3 (Vue 3)
+- **Styling**: Tailwind CSS
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth
+- **Deployment**: [Vercel/Netlify/Your Hosting Provider]
 
-# yarn
-yarn install
+## Setup Instructions
 
-# bun
-bun install
-```
+### Prerequisites
 
-## Development Server
+- Node.js (v18 or higher)
+- Firebase project with Firestore and Authentication enabled
+- Git (optional)
 
-Start the development server on `http://localhost:3000`:
+### Installation
 
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
+1. Clone the repository:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+git clone https://github.com/your-repo/walls-and-gates-careers.git
+cd walls-and-gates-careers
 ```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
