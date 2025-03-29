@@ -1,6 +1,6 @@
 # Walls and Gates Careers Portal
 
-![Walls and Gates Logo](https://via.placeholder.com/150x50?text=Walls+and+Gates)  
+![Walls and Gates Logo](https://placehold.co/600x400?text=Walls+and+Gates)  
 *A modern job listings platform for Walls and Gates*
 
 ## Features
