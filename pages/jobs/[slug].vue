@@ -47,7 +47,7 @@ onMounted(async () => {
       <div class="space-y-6">
         <div>
           <h2 class="text-xl font-semibold mb-2">Description</h2>
-          <div class="text-gray-700 list-disc" v-html="job.description_html"></div>
+          <div class="text-gray-700 leading-6 list-disc editor-p" v-html="job.description_html"></div>
         </div>
         
         <div v-if="job.requirements">
@@ -66,9 +66,15 @@ onMounted(async () => {
 
         <div>
           <h2 class="text-xl font-semibold mb-2">How to Apply</h2>
-          <div class="prose-sm text-gray-700 whitespace-pre-wrap" v-html="job.application_instructions_html"></div>
+          <div class="prose-sm text-gray-700 whitespace-pre-wrap editor-p" v-html="job.application_instructions_html"></div>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style>
+p {
+  padding: 5px 0;
+}
+</style>

@@ -18,6 +18,15 @@
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15 20H7V18H9.92661L12.0425 6H9V4H17V6H14.0734L11.9575 18H15V20Z"></path></svg>
       </button>
       <button type="button"
+        @click="setLink"
+        :class="{ 'is-active bg-slate-100 dark:bg-slate-400': editor.isActive('link') }"
+        class="w-6 py-1 px-1 active:ring-1 rounded-sm focus:ring-primary-500"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.364 15.5355L16.9497 14.1213L18.364 12.7071C20.3166 10.7545 20.3166 7.58866 18.364 5.63604C16.4113 3.68342 13.2455 3.68342 11.2929 5.63604L9.87868 7.05025L8.46447 5.63604L9.87868 4.22183C12.6123 1.48815 17.0445 1.48815 19.7782 4.22183C22.5118 6.9555 22.5118 11.3877 19.7782 14.1213L18.364 15.5355ZM15.5355 18.364L14.1213 19.7782C11.3877 22.5118 6.9555 22.5118 4.22183 19.7782C1.48815 17.0445 1.48815 12.6123 4.22183 9.87868L5.63604 8.46447L7.05025 9.87868L5.63604 11.2929C3.68342 13.2455 3.68342 16.4113 5.63604 18.364C7.58866 20.3166 10.7545 20.3166 12.7071 18.364L14.1213 16.9497L15.5355 18.364ZM14.8284 7.75736L16.2426 9.17157L9.17157 16.2426L7.75736 14.8284L14.8284 7.75736Z"></path>
+        </svg>
+      </button>
+      <button type="button"
         @click="editor.chain().focus().toggleStrike().run()"
         :disabled="!editor.can().chain().focus().toggleStrike().run()"
         :class="{ 'is-active bg-slate-100 dark:bg-slate-400': editor.isActive('strike') }"
@@ -123,6 +132,8 @@
 </template>
 
 <script setup>
+import { Link } from '@tiptap/extension-link'
+
 const props = defineProps({
   modelValue: {
     type: String,
@@ -133,7 +144,12 @@ const emit = defineEmits(['update:modelValue']);
 
 const editor = useEditor({
   content: props.modelValue,
-  extensions: [TiptapStarterKit],
+  extensions: [
+    TiptapStarterKit,
+    Link.configure({
+      openOnClick: false,
+    })
+  ],
   onUpdate: ({ editor }) => {
     // HTML
     emit('update:modelValue', editor.getHTML());
@@ -144,6 +160,27 @@ const editor = useEditor({
     }, 
   },
 });
+
+const setLink = () => {
+  const previousUrl = editor.value.getAttributes('link').href
+  const url = window.prompt('URL', previousUrl)
+
+  // cancelled
+  if (url === null) {
+    return
+  }
+
+  // empty
+  if (url === '') {
+    editor.value.chain().focus().extendMarkRange('link').unsetLink()
+      .run()
+    return
+  }
+
+  // update link
+  editor.value.chain().focus().extendMarkRange('link').setLink({ href: url })
+    .run()
+}
 
 watch(
   () => props.modelValue,
