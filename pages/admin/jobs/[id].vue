@@ -107,7 +107,7 @@ function removeBenefit(index) {
       </div>
 
       <div class="space-y-2">
-        <label class="block font-semibold">Salary Range</label>
+        <label class="block font-semibold">Salary Range (₦)</label>
         <input v-model="job.salary" class="w-full p-2 border rounded">
       </div>
 

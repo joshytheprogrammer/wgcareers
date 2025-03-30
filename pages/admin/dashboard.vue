@@ -36,7 +36,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
+  <div class="container max-w-7xl  mx-auto p-4">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-2xl font-bold">Job Listings Admin</h1>
       <div class="space-x-4">
