@@ -248,6 +248,11 @@ function removeItem(array, index) {
             label="Cancel"
             :disabled="isLoading"
           />
+          <UButton
+            :to="`/admin/jobs/${route.params.id}/form-builder`"
+            label="Manage Form"
+            color="secondary"
+          />
           
           <UButton
             type="submit"
