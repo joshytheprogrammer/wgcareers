@@ -88,6 +88,52 @@ function clearFilters() {
   selectedLocation.value = 'All'
   selectedJobType.value = 'All'
 }
+
+useHead({
+  title: "Careers | Walls and Gates | Find Your Next Opportunity",
+  meta: [
+    {
+      name: "description",
+      content: "Discover job openings exclusively at Walls and Gates. Find positions that match your skills and career goals."
+    },
+    {
+      name: "keywords",
+      content: "Walls and Gates jobs, Walls and Gates careers, employment, job board, hiring"
+    },
+    {
+      name: "robots",
+      content: "index, follow"
+    },
+    {
+      property: "og:title",
+      content: "Walls and Gates Careers | Find Your Next Opportunity"
+    },
+    {
+      property: "og:description",
+      content: "Browse job openings at Walls and Gates. Apply today and take the next step in your career."
+    },
+    {
+      property: "og:type",
+      content: "website"
+    },
+    {
+      property: "og:url",
+      content: "https://careers.wandggroup.com" // Replace with the actual job board URL
+    },
+    {
+      name: "twitter:card",
+      content: "summary"
+    },
+    {
+      name: "twitter:title",
+      content: "Walls and Gates Careers | Find Your Next Opportunity"
+    },
+    {
+      name: "twitter:description",
+      content: "Explore job opportunities at Walls and Gates. Apply now to join our team."
+    }
+  ]
+})
 </script>
 
 <template>
