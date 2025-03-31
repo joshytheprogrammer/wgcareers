@@ -5,21 +5,21 @@ const route = useRoute()
 
 const job = ref({
   title: '',
-  company: 'Walls and Gates', // Added company field
+  company: 'Walls and Gates',
   location: '',
   type: 'Full-time',
   description_snippet: '',
-  description_html: '', // HTML formatted description
-  salary: '', // Added salary field
+  description_html: '',
+  salary: '',
   requirements: [],
-  benefits: [], // Added benefits array
-  application_instructions_html: '', // HTML formatted instructions
+  benefits: [],
+  application_instructions_html: '',
   created_at: new Date(),
   slug: ''
 })
 
 const requirementInput = ref('')
-const benefitInput = ref('') // Added benefit input
+const benefitInput = ref('')
 const error = ref('')
 
 // Fetch existing job
@@ -35,7 +35,6 @@ if (route.params.id !== 'new') {
 
 async function handleSave() {
   try {
-    // Generate slug
     job.value.slug = job.value.title
       .toLowerCase()
       .replace(/ /g, '-')
@@ -60,7 +59,6 @@ function addRequirement() {
   }
 }
 
-// Added benefit management functions
 function addBenefit() {
   if (benefitInput.value.trim()) {
     job.value.benefits = [...(job.value.benefits || []), benefitInput.value.trim()]
@@ -68,114 +66,141 @@ function addBenefit() {
   }
 }
 
-function removeBenefit(index) {
-  job.value.benefits = job.value.benefits.filter((_, i) => i !== index)
+function removeItem(array, index) {
+  return array.filter((_, i) => i !== index)
 }
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
-    <NuxtLink to="/admin/dashboard" class="block mb-8 text-blue-600">
-      ← Back to Dashboard
-    </NuxtLink>
+  <UContainer class="py-8">
+    <UButton
+      to="/admin/dashboard"
+      icon="i-heroicons-arrow-left"
+      variant="ghost"
+      color="gray"
+      class="mb-6"
+    >
+      Back to Dashboard
+    </UButton>
 
-    <form @submit.prevent="handleSave" class="space-y-6 max-w-3xl">
-      <div class="space-y-2">
-        <label class="block font-semibold">Job Title</label>
-        <input v-model="job.title" required class="w-full p-2 border rounded">
-      </div>
+    <UCard>
+      <template #header>
+        <h2 class="text-xl font-semibold">
+          {{ route.params.id === 'new' ? 'Create New' : 'Edit' }} Job Listing
+        </h2>
+      </template>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Company</label>
-        <input v-model="job.company" required class="w-full p-2 border rounded">
-      </div>
+      <form @submit.prevent="handleSave" class="space-y-6">
+        <UFormField label="Job Title" required>
+          <UInput v-model="job.title" />
+        </UFormField>
 
-      <div class="grid grid-cols-2 gap-4">
-        <div class="space-y-2">
-          <label class="block font-semibold">Location</label>
-          <input v-model="job.location" required class="w-full p-2 border rounded">
+        <UFormField label="Company" required>
+          <UInput v-model="job.company" />
+        </UFormField>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <UFormField label="Location" required>
+            <UInput v-model="job.location" />
+          </UFormField>
+          
+          <UFormField label="Job Type" required>
+            <USelect
+              v-model="job.type"
+              :items="['Full-time', 'Part-time', 'Contract']"
+            />
+          </UFormField>
         </div>
-        
-        <div class="space-y-2">
-          <label class="block font-semibold">Job Type</label>
-          <select v-model="job.type" class="w-full p-2 border rounded">
-            <option>Full-time</option>
-            <option>Part-time</option>
-            <option>Contract</option>
-          </select>
-        </div>
-      </div>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Salary Range (₦)</label>
-        <input v-model="job.salary" class="w-full p-2 border rounded">
-      </div>
+        <UFormField label="Salary Range">
+          <UInput v-model="job.salary" placeholder="₦" />
+        </UFormField>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Description Snippet</label>
-        <textarea v-model="job.description_snippet" class="w-full p-2 border rounded h-24"></textarea>
-      </div>
+        <UFormField label="Description Snippet">
+          <UTextarea v-model="job.description_snippet" />
+        </UFormField>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Full Description (HTML)</label>
-        <EditorAdminEditor v-model="job.description_html" />
-      </div>
+        <UFormField label="Full Description">
+          <EditorAdminEditor v-model="job.description_html" />
+        </UFormField>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Requirements</label>
-        <div class="flex gap-2">
-          <input v-model="requirementInput" class="flex-1 p-2 border rounded">
-          <button @click.prevent="addRequirement" class="bg-gray-200 px-4 py-2 rounded">
-            Add
-          </button>
-        </div>
-        <ul class="list-disc pl-6">
-          <li v-for="(req, index) in job.requirements" :key="index" class="flex justify-between items-center">
-            {{ req }}
-            <button 
-              @click="job.requirements = job.requirements.filter((_, i) => i !== index)"
-              class="text-red-500"
+        <UFormField label="Requirements">
+          <div class="flex gap-2">
+            <UInput v-model="requirementInput" placeholder="Add requirement" />
+            <UButton
+              @click.prevent="addRequirement"
+              icon="i-heroicons-plus"
+              variant="solid"
+              color="primary"
+            />
+          </div>
+          <ul class="mt-2 space-y-1">
+            <li
+              v-for="(req, index) in job.requirements"
+              :key="index"
+              class="flex items-center justify-between p-2 bg-gray-50 rounded"
             >
-              ×
-            </button>
-          </li>
-        </ul>
-      </div>
+              <span>{{ req }}</span>
+              <UButton
+                @click="job.requirements = removeItem(job.requirements, index)"
+                icon="i-heroicons-x-mark"
+                color="red"
+                variant="ghost"
+                size="xs"
+              />
+            </li>
+          </ul>
+        </UFormField>
 
-      <!-- Added Benefits Section -->
-      <div class="space-y-2">
-        <label class="block font-semibold">Benefits</label>
-        <div class="flex gap-2">
-          <input v-model="benefitInput" class="flex-1 p-2 border rounded" placeholder="Add benefit (e.g., Health insurance)">
-          <button @click.prevent="addBenefit" class="bg-gray-200 px-4 py-2 rounded">
-            Add
-          </button>
-        </div>
-        <ul class="list-disc pl-6">
-          <li v-for="(benefit, index) in job.benefits" :key="'benefit-'+index" class="flex justify-between items-center">
-            {{ benefit }}
-            <button 
-              @click="removeBenefit(index)"
-              class="text-red-500"
+        <UFormField label="Benefits">
+          <div class="flex gap-2">
+            <UInput v-model="benefitInput" placeholder="Add benefit" />
+            <UButton
+              @click.prevent="addBenefit"
+              icon="i-heroicons-plus"
+              variant="solid"
+              color="primary"
+            />
+          </div>
+          <ul class="mt-2 space-y-1">
+            <li
+              v-for="(benefit, index) in job.benefits"
+              :key="'benefit-'+index"
+              class="flex items-center justify-between p-2 bg-gray-50 rounded"
             >
-              ×
-            </button>
-          </li>
-        </ul>
-      </div>
+              <span>{{ benefit }}</span>
+              <UButton
+                @click="job.benefits = removeItem(job.benefits, index)"
+                icon="i-heroicons-x-mark"
+                color="red"
+                variant="ghost"
+                size="xs"
+              />
+            </li>
+          </ul>
+        </UFormField>
 
-      <div class="space-y-2">
-        <label class="block font-semibold">Application Instructions (HTML)</label>
-        <EditorAdminEditor v-model="job.application_instructions_html" />
-      </div>
+        <UFormField label="Application Instructions">
+          <EditorAdminEditor v-model="job.application_instructions_html" />
+        </UFormField>
 
-      <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded">
-        Save Job
-      </button>
+        <div class="flex justify-end">
+          <UButton
+            type="submit"
+            color="primary"
+            icon="i-heroicons-check"
+            :label="route.params.id === 'new' ? 'Create Job' : 'Update Job'"
+          />
+        </div>
 
-      <div v-if="error" class="text-red-500 p-2 bg-red-100 rounded">
-        {{ error }}
-      </div>
-    </form>
-  </div>
+        <UAlert
+          v-if="error"
+          icon="i-heroicons-exclamation-triangle"
+          color="red"
+          variant="solid"
+          :title="error"
+        />
+      </form>
+    </UCard>
+  </UContainer>
 </template>

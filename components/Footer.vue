@@ -1,6 +1,6 @@
 <!-- components/AppFooter.vue -->
 <template>
-  <footer class="bg-gray-900 text-gray-300 py-6 mt-12 border-t border-gray-800">
+  <footer class="bg-black text-white py-6 mt-12 border-t border-gray-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col md:flex-row items-center justify-between">
         <!-- Copyright Section -->
