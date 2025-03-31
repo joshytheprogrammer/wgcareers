@@ -6,6 +6,8 @@ const db = useFirestore()
 
 const jobs = ref([])
 const error = ref('')
+const isLoading = ref(true)
+const searchQuery = ref('')
 
 // Realtime jobs listener
 onMounted(() => {
@@ -14,11 +16,25 @@ onMounted(() => {
       id: doc.id,
       ...doc.data()
     }))
+    isLoading.value = false
   }, (err) => {
     error.value = err.message
+    isLoading.value = false
   })
 
   return () => unsubscribe()
+})
+
+const filteredJobs = computed(() => {
+  if (!searchQuery.value) return jobs.value
+  
+  const query = searchQuery.value.toLowerCase()
+  return jobs.value.filter(job => 
+    job.title.toLowerCase().includes(query) ||
+    job.location.toLowerCase().includes(query) ||
+    job.type.toLowerCase().includes(query) ||
+    job.description_snippet.toLowerCase().includes(query)
+  )
 })
 
 async function deleteJob(id) {
@@ -33,49 +49,127 @@ async function handleLogout() {
   await signOut(auth)
   navigateTo('/')
 }
+
+function confirmDelete(job) {
+  const isConfirmed = confirm(`Delete "${job.title}" position?`)
+  if (isConfirmed) deleteJob(job.id)
+}
 </script>
 
 <template>
-  <div class="container max-w-7xl  mx-auto p-4">
-    <div class="flex justify-between items-center mb-8">
-      <h1 class="text-2xl font-bold">Job Listings Admin</h1>
-      <div class="space-x-4">
-        <NuxtLink to="/admin/jobs/new" class="bg-green-600 text-white px-4 py-2 rounded">
-          Add New Job
-        </NuxtLink>
-        <button 
-          @click="handleLogout" 
-          class="bg-gray-600 text-white px-4 py-2 rounded"
-        >
-          Logout
-        </button>
+  <UContainer class="py-8">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Job Listings Dashboard</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">
+          Manage all current job postings
+        </p>
       </div>
-    </div>
-
-    <div class="grid gap-4">
-      <div v-for="job in jobs" :key="job.id" class="bg-white p-4 rounded shadow">
-        <div class="flex justify-between items-center">
-          <div>
-            <h2 class="text-xl font-semibold">{{ job.title }}</h2>
-            <p class="text-gray-600">{{ job.location }} • {{ job.type }}</p>
-            <p class="text-gray-700">{{ job.description_snippet }}</p>
-          </div>
-          <div class="space-x-2">
-            <NuxtLink 
-              :to="`/admin/jobs/${job.id}`"
-              class="bg-blue-600 text-white px-3 py-1 rounded"
-            >
-              Edit
-            </NuxtLink>
-            <button 
-              @click="deleteJob(job.id)"
-              class="bg-red-600 text-white px-3 py-1 rounded"
-            >
-              Delete
-            </button>
-          </div>
+      
+      <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <UInput
+          v-model="searchQuery"
+          placeholder="Search jobs..."
+          icon="i-heroicons-magnifying-glass"
+          class="flex-1 min-w-[250px]"
+        />
+        <div class="flex gap-3">
+          <UButton
+            to="/admin/jobs/new"
+            icon="i-heroicons-plus"
+            label="Add Job"
+            color="primary"
+          />
+          <UButton
+            @click="handleLogout"
+            icon="i-heroicons-arrow-left-on-rectangle"
+            label="Logout"
+            color="gray"
+            variant="outline"
+          />
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Error Alert -->
+    <UAlert
+      v-if="error"
+      icon="i-heroicons-exclamation-triangle"
+      color="red"
+      variant="solid"
+      :title="error"
+      class="mb-6"
+    />
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="space-y-4">
+      <USkeleton class="h-20 w-full" v-for="i in 3" :key="i" />
+    </div>
+
+    <!-- Empty State -->
+    <UCard v-else-if="!filteredJobs.length">
+      <template #header>
+        <h3 class="text-lg font-medium text-center">
+          {{ searchQuery ? 'No matching jobs found' : 'No jobs posted yet' }}
+        </h3>
+      </template>
+      <div class="text-center text-gray-500 dark:text-gray-400">
+        <p v-if="searchQuery">Try adjusting your search query</p>
+        <p v-else>Create your first job posting using the "Add Job" button</p>
+      </div>
+    </UCard>
+
+    <!-- Jobs List -->
+    <div v-else class="space-y-4">
+      <UCard
+        v-for="job in filteredJobs"
+        :key="job.id"
+        class="hover:shadow-lg transition-shadow"
+      >
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-2 flex-1">
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ job.title }}
+              </h2>
+              <UBadge :label="job.type" size="sm" />
+            </div>
+            
+            <div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+              <div class="flex items-center gap-1">
+                <UIcon name="i-heroicons-building-office" class="w-4 h-4" />
+                <span>{{ job.company }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
+                <span>{{ job.location }}</span>
+              </div>
+            </div>
+            
+            <p class="text-gray-600 dark:text-gray-300 line-clamp-2">
+              {{ job.description_snippet }}
+            </p>
+          </div>
+
+          <div class="flex gap-2">
+            <UButton
+              :to="`/admin/jobs/${job.id}`"
+              icon="i-heroicons-pencil"
+              label="Edit"
+              color="gray"
+              variant="outline"
+            />
+            <UButton
+              @click="confirmDelete(job)"
+              icon="i-heroicons-trash"
+              label="Delete"
+              color="red"
+              variant="outline"
+            />
+          </div>
+        </div>
+      </UCard>
+    </div>
+  </UContainer>
 </template>
