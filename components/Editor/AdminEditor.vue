@@ -1,43 +1,54 @@
 <template>
   <div>
     <!-- Link Dialog -->
-    <div v-if="showLinkDialog" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl transform transition-all"
-        @keydown.esc="showLinkDialog = false">
-        <form @submit.prevent="handleLinkSubmit">
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Link URL
-              </label>
-              <input
-                ref="linkInput"
-                v-model="linkUrl"
-                type="url"
-                placeholder="https://example.com"
-                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white"
-                @keydown.enter.prevent="handleLinkSubmit"
-              >
+    <Transition name="fade">
+      <div v-if="showLinkDialog" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Transition name="scale">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md transform transition-all"
+            @keydown.esc="showLinkDialog = false">
+            <div class="p-5 border-b border-gray-200 dark:border-gray-700">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                Insert Link
+              </h3>
             </div>
-            <div class="flex justify-end space-x-3">
-              <button
-                type="button"
-                @click="showLinkDialog = false"
-                class="inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Apply Link
-              </button>
-            </div>
+            
+            <form @submit.prevent="handleLinkSubmit" class="p-5">
+              <div class="space-y-4">
+                <UFormGroup label="Link URL" required>
+                  <UInput
+                    ref="linkInput"
+                    v-model="linkUrl"
+                    type="url"
+                    placeholder="https://example.com"
+                    autofocus
+                    icon="i-heroicons-link"
+                    class="w-full"
+                    @keydown.enter.prevent="handleLinkSubmit"
+                  />
+                </UFormGroup>
+                
+                <div class="flex justify-end gap-3 pt-2">
+                  <UButton
+                    type="button"
+                    @click="showLinkDialog = false"
+                    color="gray"
+                    variant="ghost"
+                    label="Cancel"
+                  />
+                  <UButton
+                    type="submit"
+                    color="primary"
+                    label="Apply Link"
+                    :disabled="!linkUrl"
+                  />
+                </div>
+              </div>
+            </form>
           </div>
-        </form>
+        </Transition>
       </div>
-    </div>
+    </Transition>
+
     <div v-if="editor" class="space-x-2 pt-1 pb-2">
       <button type="button"
         @click="editor.chain().focus().toggleBold().run()"
