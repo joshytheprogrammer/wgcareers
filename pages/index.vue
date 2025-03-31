@@ -1,3 +1,4 @@
+<!-- pages/index.vue -->
 <script setup>
 import { collection, onSnapshot } from 'firebase/firestore'
 const db = useFirestore()
@@ -26,21 +27,60 @@ onMounted(() => {
 })
 
 const uniqueLocations = computed(() => {
-  return [...new Set(jobs.value.map(job => job.location).filter(Boolean))]
+  return ['All', ...new Set(jobs.value.map(job => job.location).filter(Boolean))]
 })
 
 const uniqueJobTypes = computed(() => {
-  return [...new Set(jobs.value.map(job => job.type).filter(Boolean))]
+  return ['All', ...new Set(jobs.value.map(job => job.type).filter(Boolean))]
 })
 
 const filteredJobs = computed(() => {
-  return jobs.value.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchTerm.value.toLowerCase())
+  // First apply location and job type filters
+  let results = jobs.value.filter(job => {
     const matchesLocation = selectedLocation.value === 'All' || job.location === selectedLocation.value
     const matchesJobType = selectedJobType.value === 'All' || job.type === selectedJobType.value
-    return matchesSearch && matchesLocation && matchesJobType
+    return matchesLocation && matchesJobType
   })
+
+  // Then apply search if there's a search term
+  if (searchTerm.value) {
+    const searchTerms = searchTerm.value.toLowerCase().split(' ')
+    
+    results = results.map(job => {
+      // Create a searchable string from all relevant fields
+      const searchContent = [
+        job.title,
+        job.company,
+        job.location,
+        job.type,
+        job.description_snippet,
+        job.description_html?.replace(/<[^>]*>/g, ' '), // Strip HTML tags
+        job.salary,
+        job.requirements?.join(' '),
+        job.benefits?.join(' '),
+        job.application_instructions_html?.replace(/<[^>]*>/g, ' ')
+      ].join(' ').toLowerCase()
+
+      // Calculate relevance score
+      let score = 0
+      searchTerms.forEach(term => {
+        if (term.length < 2) return
+        
+        // Higher scores for matches in more important fields
+        if (job.title.toLowerCase().includes(term)) score += 5
+        if (job.company.toLowerCase().includes(term)) score += 4
+        if (job.location.toLowerCase().includes(term)) score += 3
+        if (job.type.toLowerCase().includes(term)) score += 3
+        if (searchContent.includes(term)) score += 1
+      })
+
+      return { ...job, _searchScore: score }
+    })
+    .filter(job => job._searchScore > 0) // Only keep jobs with matches
+    .sort((a, b) => b._searchScore - a._searchScore) // Sort by relevance
+  }
+
+  return results
 })
 
 function clearFilters() {
@@ -51,37 +91,63 @@ function clearFilters() {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 py-8">
+  <UContainer class="py-8">
     <div v-if="loading" class="text-center p-8">
-      Loading jobs...
+      <USkeleton class="h-8 w-32 mx-auto mb-2" />
+      <USkeleton class="h-4 w-64 mx-auto" />
     </div>
 
     <div v-else>
       <div class="mb-8 space-y-4">
         <SearchBar @search="term => searchTerm = term" />
-        <div class="flex gap-4 flex-wrap ">
-          <FilterLocation :locations="uniqueLocations" @select="selectedLocation = $event" />
-          <FilterJobType :jobTypes="uniqueJobTypes" @select="selectedJobType = $event" />
-          <button 
+        
+        <div class="flex gap-4 flex-wrap items-center">
+          <USelect
+            v-model="selectedLocation"
+            :items="uniqueLocations"
+            placeholder="Filter by location"
+            class="min-w-[200px]"
+          />
+          
+          <USelect
+            v-model="selectedJobType"
+            :items="uniqueJobTypes"
+            placeholder="Filter by job type"
+            class="min-w-[200px]"
+          />
+          
+          <UButton
             @click="clearFilters"
-            class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Clear Filters
-          </button>
+            label="Clear Filters"
+            color="gray"
+            variant="outline"
+          />
         </div>
       </div>
 
-      <div v-if="error" class="p-4 mb-4 text-red-500 bg-red-100 rounded">
-        {{ error }}
-      </div>
+      <UAlert
+        v-if="error"
+        icon="i-heroicons-exclamation-triangle"
+        color="red"
+        variant="solid"
+        :title="error"
+        class="mb-4"
+      />
 
-      <div v-if="filteredJobs.length === 0 && !error" class="text-center p-8">
-        No jobs found matching your criteria
-      </div>
+      <UCard v-if="filteredJobs.length === 0 && !error">
+        <template #header>
+          <h3 class="text-lg font-medium text-center">
+            No jobs found matching your criteria
+          </h3>
+        </template>
+        <div class="text-center text-gray-500">
+          Try adjusting your search or filters
+        </div>
+      </UCard>
 
       <div v-else class="grid gap-6">
         <JobList v-for="job in filteredJobs" :key="job.id" :job="job" />
       </div>
     </div>
-  </div>
+  </UContainer>
 </template>
