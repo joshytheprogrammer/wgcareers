@@ -21,6 +21,7 @@ const job = ref({
 const requirementInput = ref('')
 const benefitInput = ref('')
 const error = ref('')
+const isLoading = ref(false)
 
 // Fetch existing job
 if (route.params.id !== 'new') {
@@ -35,6 +36,9 @@ if (route.params.id !== 'new') {
 
 async function handleSave() {
   try {
+    isLoading.value = true
+    error.value = ''
+    
     job.value.slug = job.value.title
       .toLowerCase()
       .replace(/ /g, '-')
@@ -46,23 +50,19 @@ async function handleSave() {
     } else {
       await setDoc(doc(db, 'jobs', route.params.id), job.value, { merge: true })
     }
-    navigateTo('/admin/dashboard')
+    
+    await navigateTo('/admin/dashboard')
   } catch (err) {
     error.value = 'Save failed: ' + err.message
+  } finally {
+    isLoading.value = false
   }
 }
 
-function addRequirement() {
-  if (requirementInput.value.trim()) {
-    job.value.requirements = [...(job.value.requirements || []), requirementInput.value.trim()]
-    requirementInput.value = ''
-  }
-}
-
-function addBenefit() {
-  if (benefitInput.value.trim()) {
-    job.value.benefits = [...(job.value.benefits || []), benefitInput.value.trim()]
-    benefitInput.value = ''
+function addItem(arrayRef, inputRef) {
+  if (inputRef.value.trim()) {
+    arrayRef.value = [...arrayRef.value, inputRef.value.trim()]
+    inputRef.value = ''
   }
 }
 
@@ -79,127 +79,194 @@ function removeItem(array, index) {
       variant="ghost"
       color="gray"
       class="mb-6"
+      :disabled="isLoading"
     >
       Back to Dashboard
     </UButton>
 
     <UCard>
       <template #header>
-        <h2 class="text-xl font-semibold">
-          {{ route.params.id === 'new' ? 'Create New' : 'Edit' }} Job Listing
-        </h2>
+        <div class="flex items-center gap-3">
+          <UIcon 
+            name="i-heroicons-briefcase" 
+            class="w-6 h-6 text-primary-500" 
+          />
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            {{ route.params.id === 'new' ? 'Create New' : 'Edit' }} Job Listing
+          </h2>
+        </div>
       </template>
 
       <form @submit.prevent="handleSave" class="space-y-6">
-        <UFormField label="Job Title" required>
-          <UInput class="w-full" size="xl" v-model="job.title" />
-        </UFormField>
+        <!-- Basic Information Section -->
+          <UFormField label="Job Title" required>
+            <UInput class="w-full" 
+              v-model="job.title" 
+              placeholder="e.g. Senior Software Engineer"
+              icon="i-heroicons-tag"
+              size="xl"
+            />
+          </UFormField>
 
-        <UFormField label="Company" required>
-          <UInput class="w-full" size="xl" v-model="job.company" />
-        </UFormField>
+          <UFormField label="Company" required>
+            <UInput class="w-full" 
+              v-model="job.company" 
+              icon="i-heroicons-building-office"
+              size="xl"
+            />
+          </UFormField>
 
-        <UFormField label="Location" required>
-          <UInput class="w-full" size="xl" v-model="job.location" />
-        </UFormField>
-          
-        <UFormField label="Job Type" required>
-          <USelect
-            v-model="job.type"
-            :items="['Full-time', 'Part-time', 'Contract', 'Intern']"
-            class="w-full"
-          />
-        </UFormField>
-        <UFormField label="Salary Range">
-          <UInput class="w-full" size="xl" v-model="job.salary" placeholder="₦" />
-        </UFormField>
+          <UFormField label="Location" required>
+            <UInput class="w-full" 
+              v-model="job.location" 
+              placeholder="e.g. Lagos, Nigeria"
+              icon="i-heroicons-map-pin"
+              size="xl"
+            />
+          </UFormField>
 
+          <UFormField label="Job Type" required>
+            <USelect
+              v-model="job.type"
+              :items="['Full-time', 'Part-time', 'Contract', 'Intern']"
+              icon="i-heroicons-clock"
+              size="xl"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField label="Salary Range">
+            <UInput class="w-full" 
+              v-model="job.salary" 
+              placeholder="e.g. ₦500,000 - ₦800,000"
+              icon="i-heroicons-currency-dollar"
+              size="xl"
+            />
+          </UFormField>
+
+        <!-- Description Section -->
         <UFormField label="Description Snippet">
-          <UTextarea class="w-full" autoresize v-model="job.description_snippet" />
+          <UTextarea 
+            v-model="job.description_snippet" 
+            class="w-full"
+            placeholder="Brief summary visible in listings"
+            autoresize
+          />
         </UFormField>
 
         <UFormField label="Full Description">
           <EditorAdminEditor v-model="job.description_html" />
         </UFormField>
 
+        <!-- Requirements Section -->
         <UFormField label="Requirements">
-          <div class="flex gap-1">
-            <UInput class="w-full" size="xl" v-model="requirementInput" placeholder="Add requirement" />
+          <div class="flex gap-2">
+            <UInput class="w-full" 
+              v-model="requirementInput" 
+              placeholder="Add requirement (press Enter to add)"
+              @keyup.enter="addItem(job.requirements, requirementInput)"
+              size="xl"
+            />
             <UButton
-              @click.prevent="addRequirement"
+              @click="addItem(job.requirements, requirementInput)"
               icon="i-heroicons-plus"
-              variant="solid"
               color="primary"
             />
           </div>
-          <div class="space-x-2 space-y-1 py-2">
-            <UBadge 
-            size="lg"
-            v-for="(requirement, index) in job.requirements"
-            :key="'requirement-'+index"
+          <div class="mt-3 flex flex-wrap gap-2">
+            <UBadge
+              v-for="(req, index) in job.requirements"
+              :key="'req-'+index"
+              color="primary"
+              variant="subtle"
+              size="xl"
             >
-              {{ requirement }}
-
-              <UButton
-                @click="job.requirements = removeItem(job.requirements, index)"
-                icon="i-lucide-badge-x"
-                class="cursor-pointer w-fit hover:text-red-300 text-base ml-2"
-              />
+              <span class="flex items-center gap-1.5">
+                {{ req }}
+                <UButton
+                  @click="job.requirements = removeItem(job.requirements, index)"
+                  icon="i-heroicons-x-mark"
+                  color="gray"
+                  variant="link"
+                  :padded="false"
+                  class="hover:text-red-500"
+                />
+              </span>
             </UBadge>
           </div>
         </UFormField>
 
+        <!-- Benefits Section -->
         <UFormField label="Benefits">
-          <div class="flex gap-1">
-            <UInput class="w-full" size="xl" v-model="benefitInput" @keypress.enter="addBenefit" placeholder="Add benefit" />
+          <div class="flex gap-2">
+            <UInput class="w-full" 
+              v-model="benefitInput" 
+              placeholder="Add benefit (press Enter to add)"
+              @keyup.enter="addItem(job.benefits, benefitInput)"
+              size="xl"
+            />
             <UButton
-              @click.prevent="addBenefit"
+              @click="addItem(job.benefits, benefitInput)"
               icon="i-heroicons-plus"
-              variant="solid"
               color="primary"
             />
           </div>
-          <div class="space-x-2 space-y-1 py-2">
-            <UBadge 
-            size="lg"
-            v-for="(benefit, index) in job.benefits"
-            :key="'benefit-'+index"
+          <div class="mt-3 flex flex-wrap gap-2">
+            <UBadge
+              v-for="(benefit, index) in job.benefits"
+              :key="'benefit-'+index"
+              color="primary"
+              variant="subtle"
+              size="xl"
             >
-              {{ benefit }}
-
-              <UButton
-                @click="job.benefits = removeItem(job.benefits, index)"
-                icon="i-lucide-badge-x"
-                class="cursor-pointer w-fit hover:text-red-300 text-base ml-2"
-              />
-
-              <!-- <UButton class="cursor-pointer flex hover:text-red-300 justify-center items-center ">
-                <UIcon name="" class="size-10" />
-              </UButton> -->
+              <span class="flex items-center gap-1.5">
+                {{ benefit }}
+                <UButton
+                  @click="job.benefits = removeItem(job.benefits, index)"
+                  icon="i-heroicons-x-mark"
+                  color="gray"
+                  variant="link"
+                  :padded="false"
+                  class="hover:text-red-500"
+                />
+              </span>
             </UBadge>
           </div>
-          
         </UFormField>
 
+        <!-- Application Section -->
         <UFormField label="Application Instructions">
           <EditorAdminEditor v-model="job.application_instructions_html" />
         </UFormField>
 
-        <div class="flex justify-end">
+        <!-- Form Actions -->
+        <div class="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-800">
           <UButton
-            @click.prevent="handleSave"
-            color="primary"
+            to="/admin/dashboard"
+            variant="ghost"
+            color="gray"
+            label="Cancel"
+            :disabled="isLoading"
+          />
+          
+          <UButton
+            type="submit"
+            :loading="isLoading"
+            :label="route.params.id === 'new' ? 'Create Job' : 'Save Changes'"
             icon="i-heroicons-check"
-            :label="route.params.id === 'new' ? 'Create Job' : 'Update Job'"
+            color="primary"
+            size="xl"
           />
         </div>
 
+        <!-- Error Display -->
         <UAlert
           v-if="error"
           icon="i-heroicons-exclamation-triangle"
           color="red"
-          variant="solid"
+          variant="subtle"
           :title="error"
+          class="mt-4"
         />
       </form>
     </UCard>
