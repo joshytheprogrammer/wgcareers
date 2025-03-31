@@ -33,9 +33,15 @@ onMounted(async () => {
 
 <template>
   <div v-if="job" class="max-w-3xl mx-auto px-4 py-8">
-    <NuxtLink to="/" class="mb-8 inline-block text-blue-600 hover:text-black">
-      ← Back to Listings
-    </NuxtLink>
+    <UButton
+      to="/admin/dashboard"
+      icon="i-heroicons-arrow-left"
+      variant="ghost"
+      color="gray"
+      class="mb-6"
+    >
+      Back to Listings
+    </UButton>
     <div class="bg-white p-6 rounded-lg shadow">
       <h1 class="text-3xl font-bold mb-4">{{ job.title }}</h1>
       <div class="space-y-2 mb-6">

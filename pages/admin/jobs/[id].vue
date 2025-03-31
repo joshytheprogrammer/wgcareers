@@ -72,7 +72,7 @@ function removeItem(array, index) {
 </script>
 
 <template>
-  <UContainer class="py-8">
+  <UContainer class="max-w-3xl mx-auto py-8">
     <UButton
       to="/admin/dashboard"
       icon="i-heroicons-arrow-left"
@@ -92,32 +92,30 @@ function removeItem(array, index) {
 
       <form @submit.prevent="handleSave" class="space-y-6">
         <UFormField label="Job Title" required>
-          <UInput v-model="job.title" />
+          <UInput class="w-full" size="xl" v-model="job.title" />
         </UFormField>
 
         <UFormField label="Company" required>
-          <UInput v-model="job.company" />
+          <UInput class="w-full" size="xl" v-model="job.company" />
         </UFormField>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UFormField label="Location" required>
-            <UInput v-model="job.location" />
-          </UFormField>
+        <UFormField label="Location" required>
+          <UInput class="w-full" size="xl" v-model="job.location" />
+        </UFormField>
           
-          <UFormField label="Job Type" required>
-            <USelect
-              v-model="job.type"
-              :items="['Full-time', 'Part-time', 'Contract']"
-            />
-          </UFormField>
-        </div>
-
+        <UFormField label="Job Type" required>
+          <USelect
+            v-model="job.type"
+            :items="['Full-time', 'Part-time', 'Contract', 'Intern']"
+            class="w-full"
+          />
+        </UFormField>
         <UFormField label="Salary Range">
-          <UInput v-model="job.salary" placeholder="₦" />
+          <UInput class="w-full" size="xl" v-model="job.salary" placeholder="₦" />
         </UFormField>
 
         <UFormField label="Description Snippet">
-          <UTextarea v-model="job.description_snippet" />
+          <UTextarea class="w-full" autoresize v-model="job.description_snippet" />
         </UFormField>
 
         <UFormField label="Full Description">
@@ -125,8 +123,8 @@ function removeItem(array, index) {
         </UFormField>
 
         <UFormField label="Requirements">
-          <div class="flex gap-2">
-            <UInput v-model="requirementInput" placeholder="Add requirement" />
+          <div class="flex gap-1">
+            <UInput class="w-full" size="xl" v-model="requirementInput" placeholder="Add requirement" />
             <UButton
               @click.prevent="addRequirement"
               icon="i-heroicons-plus"
@@ -134,27 +132,26 @@ function removeItem(array, index) {
               color="primary"
             />
           </div>
-          <ul class="mt-2 space-y-1">
-            <li
-              v-for="(req, index) in job.requirements"
-              :key="index"
-              class="flex items-center justify-between p-2 bg-gray-50 rounded"
+          <div class="space-x-2 space-y-1 py-2">
+            <UBadge 
+            size="xl"
+            v-for="(requirement, index) in job.requirements"
+            :key="'requirement-'+index"
             >
-              <span>{{ req }}</span>
+              {{ requirement }}
+
               <UButton
                 @click="job.requirements = removeItem(job.requirements, index)"
-                icon="i-heroicons-x-mark"
-                color="red"
-                variant="ghost"
-                size="xs"
+                icon="i-lucide-badge-x"
+                class="cursor-pointer w-fit hover:text-red-300 text-xl ml-2"
               />
-            </li>
-          </ul>
+            </UBadge>
+          </div>
         </UFormField>
 
         <UFormField label="Benefits">
-          <div class="flex gap-2">
-            <UInput v-model="benefitInput" placeholder="Add benefit" />
+          <div class="flex gap-1">
+            <UInput class="w-full" size="xl" v-model="benefitInput" @keypress.enter="addBenefit" placeholder="Add benefit" />
             <UButton
               @click.prevent="addBenefit"
               icon="i-heroicons-plus"
@@ -162,22 +159,26 @@ function removeItem(array, index) {
               color="primary"
             />
           </div>
-          <ul class="mt-2 space-y-1">
-            <li
-              v-for="(benefit, index) in job.benefits"
-              :key="'benefit-'+index"
-              class="flex items-center justify-between p-2 bg-gray-50 rounded"
+          <div class="space-x-2 space-y-1 py-2">
+            <UBadge 
+            size="xl"
+            v-for="(benefit, index) in job.benefits"
+            :key="'benefit-'+index"
             >
-              <span>{{ benefit }}</span>
+              {{ benefit }}
+
               <UButton
                 @click="job.benefits = removeItem(job.benefits, index)"
-                icon="i-heroicons-x-mark"
-                color="red"
-                variant="ghost"
-                size="xs"
+                icon="i-lucide-badge-x"
+                class="cursor-pointer w-fit hover:text-red-300 text-xl ml-2"
               />
-            </li>
-          </ul>
+
+              <!-- <UButton class="cursor-pointer flex hover:text-red-300 justify-center items-center ">
+                <UIcon name="" class="size-10" />
+              </UButton> -->
+            </UBadge>
+          </div>
+          
         </UFormField>
 
         <UFormField label="Application Instructions">
@@ -186,7 +187,7 @@ function removeItem(array, index) {
 
         <div class="flex justify-end">
           <UButton
-            type="submit"
+            @click.prevent="handleSave"
             color="primary"
             icon="i-heroicons-check"
             :label="route.params.id === 'new' ? 'Create Job' : 'Update Job'"
