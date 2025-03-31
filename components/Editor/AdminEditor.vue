@@ -206,7 +206,7 @@ const editor = useEditor({
   },
   editorProps: {
     attributes: {
-      class: "prose-sm w-full min-h-48 font-['Nunito sans'] focus:outline-none shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white ring-1 ring-inset ring-gray-300 dark:ring-gray-700 focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 rounded-md px-3 py-2 ",
+      class: "prose-sm w-full min-h-48 font-['Nunito sans'] focus:outline-none shadow-sm bg-white dark:bg-white text-black dark:text-white ring-1 ring-inset ring-gray-300 dark:ring-gray-700 focus:ring-2 focus:ring-black dark:focus:ring-white rounded-md px-3 py-2 ",
     }, 
   },
 });

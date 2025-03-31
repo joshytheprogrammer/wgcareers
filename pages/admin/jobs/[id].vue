@@ -104,7 +104,7 @@ function removeItem(array, index) {
               v-model="job.title" 
               placeholder="e.g. Senior Software Engineer"
               icon="i-heroicons-tag"
-              size="xl"
+              size="lg"
             />
           </UFormField>
 
@@ -112,7 +112,7 @@ function removeItem(array, index) {
             <UInput class="w-full" 
               v-model="job.company" 
               icon="i-heroicons-building-office"
-              size="xl"
+              size="lg"
             />
           </UFormField>
 
@@ -121,7 +121,7 @@ function removeItem(array, index) {
               v-model="job.location" 
               placeholder="e.g. Lagos, Nigeria"
               icon="i-heroicons-map-pin"
-              size="xl"
+              size="lg"
             />
           </UFormField>
 
@@ -130,7 +130,7 @@ function removeItem(array, index) {
               v-model="job.type"
               :items="['Full-time', 'Part-time', 'Contract', 'Intern']"
               icon="i-heroicons-clock"
-              size="xl"
+              size="lg"
               class="w-full"
             />
           </UFormField>
@@ -140,7 +140,7 @@ function removeItem(array, index) {
               v-model="job.salary" 
               placeholder="e.g. ₦500,000 - ₦800,000"
               icon="i-heroicons-currency-dollar"
-              size="xl"
+              size="lg"
             />
           </UFormField>
 
@@ -165,7 +165,7 @@ function removeItem(array, index) {
               v-model="requirementInput" 
               placeholder="Add requirement (press Enter to add)"
               @keyup.enter="addItem(job.requirements, requirementInput)"
-              size="xl"
+              size="lg"
             />
             <UButton
               @click="addItem(job.requirements, requirementInput)"
@@ -179,7 +179,7 @@ function removeItem(array, index) {
               :key="'req-'+index"
               color="primary"
               variant="subtle"
-              size="xl"
+              size="lg"
             >
               <span class="flex items-center gap-1.5">
                 {{ req }}
@@ -203,7 +203,7 @@ function removeItem(array, index) {
               v-model="benefitInput" 
               placeholder="Add benefit (press Enter to add)"
               @keyup.enter="addItem(job.benefits, benefitInput)"
-              size="xl"
+              size="lg"
             />
             <UButton
               @click="addItem(job.benefits, benefitInput)"
@@ -217,7 +217,7 @@ function removeItem(array, index) {
               :key="'benefit-'+index"
               color="primary"
               variant="subtle"
-              size="xl"
+              size="lg"
             >
               <span class="flex items-center gap-1.5">
                 {{ benefit }}
@@ -255,7 +255,7 @@ function removeItem(array, index) {
             :label="route.params.id === 'new' ? 'Create Job' : 'Save Changes'"
             icon="i-heroicons-check"
             color="primary"
-            size="xl"
+            size="lg"
           />
         </div>
 
