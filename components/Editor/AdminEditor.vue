@@ -14,7 +14,7 @@
             
             <form @submit.prevent="handleLinkSubmit" class="p-5">
               <div class="space-y-4">
-                <UFormGroup label="Link URL" required>
+                <UFormField label="Link URL" required>
                   <UInput
                     ref="linkInput"
                     v-model="linkUrl"
@@ -25,7 +25,7 @@
                     class="w-full"
                     @keydown.enter.prevent="handleLinkSubmit"
                   />
-                </UFormGroup>
+                </UFormField>
                 
                 <div class="flex justify-end gap-3 pt-2">
                   <UButton
