@@ -134,7 +134,7 @@ function removeItem(array, index) {
           </div>
           <div class="space-x-2 space-y-1 py-2">
             <UBadge 
-            size="xl"
+            size="lg"
             v-for="(requirement, index) in job.requirements"
             :key="'requirement-'+index"
             >
@@ -143,7 +143,7 @@ function removeItem(array, index) {
               <UButton
                 @click="job.requirements = removeItem(job.requirements, index)"
                 icon="i-lucide-badge-x"
-                class="cursor-pointer w-fit hover:text-red-300 text-xl ml-2"
+                class="cursor-pointer w-fit hover:text-red-300 text-base ml-2"
               />
             </UBadge>
           </div>
@@ -161,7 +161,7 @@ function removeItem(array, index) {
           </div>
           <div class="space-x-2 space-y-1 py-2">
             <UBadge 
-            size="xl"
+            size="lg"
             v-for="(benefit, index) in job.benefits"
             :key="'benefit-'+index"
             >
@@ -170,7 +170,7 @@ function removeItem(array, index) {
               <UButton
                 @click="job.benefits = removeItem(job.benefits, index)"
                 icon="i-lucide-badge-x"
-                class="cursor-pointer w-fit hover:text-red-300 text-xl ml-2"
+                class="cursor-pointer w-fit hover:text-red-300 text-base ml-2"
               />
 
               <!-- <UButton class="cursor-pointer flex hover:text-red-300 justify-center items-center ">
