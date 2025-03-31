@@ -32,9 +32,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="job" class="max-w-3xl mx-auto px-4 py-8">
+  <div class="max-w-3xl mx-auto px-4 py-8">
     <UButton
-      to="/admin/dashboard"
+      to="/"
       icon="i-heroicons-arrow-left"
       variant="ghost"
       color="gray"
@@ -42,7 +42,8 @@ onMounted(async () => {
     >
       Back to Listings
     </UButton>
-    <div class="bg-white p-6 rounded-lg shadow">
+    <USkeleton v-if="!job" class="h-[450px] w-full" />
+    <div v-if="job" class="bg-white p-6 rounded-lg shadow">
       <h1 class="text-3xl font-bold mb-4">{{ job.title }}</h1>
       <div class="space-y-2 mb-6">
         <p class="text-gray-600">{{ job.company }}</p>

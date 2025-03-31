@@ -93,10 +93,9 @@ function clearFilters() {
 <template>
   <UContainer class="py-8">
     <div v-if="loading" class="text-center p-8">
-      <USkeleton class="h-8 w-32 mx-auto mb-2" />
-      <USkeleton class="h-4 w-64 mx-auto" />
+      Loading...
     </div>
-
+    
     <div v-else>
       <div class="mb-8 space-y-4">
         <SearchBar @search="term => searchTerm = term" />
