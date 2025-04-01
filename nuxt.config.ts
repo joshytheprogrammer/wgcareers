@@ -3,9 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
-  modules: ['@nuxt/icon', '@nuxt/ui', 'nuxt-vuefire', "nuxt-tiptap-editor"],
+  modules: ['@nuxt/icon', '@nuxt/ui', 'nuxt-vuefire', "nuxt-tiptap-editor", '@formkit/nuxt'],
   tiptap: {
     prefix: "Tiptap", //prefix for Tiptap imports, composables not included
+  },
+  formkit: {
+    // Experimental support for auto loading (see note):
+    autoImport: true
   },
   ui: {
     colorMode: false

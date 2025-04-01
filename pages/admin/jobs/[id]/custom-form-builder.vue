@@ -53,23 +53,23 @@ const loadSchema = async () => {
 
 // Save form schema with debounce
 const saveSchema = debounce(async () => {
-  try {
-    const docRef = doc(db, 'jobs', route.params.id)
-    await setDoc(docRef, {
-      formSchema: formSchema.value
-    }, { merge: true }) // Important: merge to preserve other fields
+  // try {
+  //   const docRef = doc(db, 'jobs', route.params.id)
+  //   await setDoc(docRef, {
+  //     formSchema: formSchema.value
+  //   }, { merge: true }) // Important: merge to preserve other fields
     
-    toast.add({
-      title: 'Form saved',
-      color: 'green'
-    })
-  } catch (error) {
-    toast.add({
-      title: 'Error saving form',
-      description: error.message,
-      color: 'red'
-    })
-  }
+  //   toast.add({
+  //     title: 'Form saved',
+  //     color: 'green'
+  //   })
+  // } catch (error) {
+  //   toast.add({
+  //     title: 'Error saving form',
+  //     description: error.message,
+  //     color: 'red'
+  //   })
+  // }
 }, 5000)
 
 // Validate the schema before saving

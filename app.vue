@@ -10,6 +10,7 @@
       <UApp>
         <NuxtPage />
       </UApp>
+      
     </main>
     <Footer />
   </div>
