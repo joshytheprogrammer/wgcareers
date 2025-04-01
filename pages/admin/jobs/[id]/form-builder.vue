@@ -17,11 +17,17 @@ const formSchema = ref({
   conditions: []
 })
 
-// Available field types (Deepseek version)
+// Available field types (updated with new types)
 const fieldTypes = [
   { value: 'text', label: 'Text Input', icon: 'i-heroicons-pencil' },
   { value: 'textarea', label: 'Text Area', icon: 'i-heroicons-document-text' },
+  { value: 'email', label: 'Email', icon: 'i-heroicons-envelope' },
+  { value: 'date', label: 'Date', icon: 'i-heroicons-calendar' },
+  { value: 'tel', label: 'Phone', icon: 'i-heroicons-phone' },
+  { value: 'url', label: 'URL', icon: 'i-heroicons-link' },
   { value: 'select', label: 'Select', icon: 'i-heroicons-chevron-down' },
+  { value: 'checkbox', label: 'Checkbox', icon: 'i-heroicons-check-circle' },
+  { value: 'radio', label: 'Radio', icon: 'i-heroicons-radio' }
 ]
 
 // Validation rule types (Deepseek version)
@@ -31,7 +37,27 @@ const validationTypes = [
   { value: 'maxLength', label: 'Maximum Length' },
   { value: 'pattern', label: 'Regex Pattern' },
   { value: 'min', label: 'Minimum Value' },
-  { value: 'max', label: 'Maximum Value' }
+  { value: 'max', label: 'Maximum Value' },
+  { 
+    value: 'email', 
+    label: 'Email Format', 
+    // pattern: '/^[a-zA-Z0–9._%+-]+@[a-zA-Z0–9.-]+\.[a-zA-Z]{2,}$/' 
+  },
+  { 
+    value: 'phone', 
+    label: 'Phone Format', 
+    // pattern: '/^+?[0-9s-]{6,}$/' 
+  },
+  { 
+    value: 'url', 
+    label: 'URL Format', 
+    // pattern: '/^(https?://)?([da-z.-]+).([a-z.]{2,6})([/w.-]*)*/?$/' 
+  },
+  { 
+    value: 'date', 
+    label: 'Date Format', 
+    // pattern: '/^d{4}-d{2}-d{2}$/' 
+  }
 ]
 
 // Gemini's schema generation logic
@@ -44,11 +70,9 @@ const formKitSchema = computed(() => {
       switch(rule) {
         case 'minLength': validationRules.push(`length:${value},${field.validation.maxLength || ''}`); break;
         case 'maxLength': 
-          // If minLength exists, it's already handled in the case above
           if (!field.validation.minLength) validationRules.push(`length:0,${value}`);
           break;
         case 'pattern': 
-          // Proper regex handling - remove delimiters if present
           let regex = value;
           // if (regex.startsWith('/') && regex.endsWith('/')) {
           //   regex = regex.slice(1, -1);
@@ -63,13 +87,32 @@ const formKitSchema = computed(() => {
       }
     }
 
-    return {
+    const baseField = {
       $formkit: field.type,
       name: field.id,
       label: field.label,
       placeholder: field.placeholder,
       validation: validationRules.join('|'),
-      ...(field.type === 'select' && { options: field.options })
+    }
+
+    // Special handling for different field types
+    switch(field.type) {
+      case 'select':
+      case 'radio':
+        return { ...baseField, options: field.options }
+      case 'checkbox':
+        return { 
+          ...baseField, 
+          options: field.options.reduce((obj, option, index) => {
+            obj[`option${index}`] = option
+            return obj
+          }, {}),
+          multiple: field.multiple
+        }
+      case 'date':
+        return { ...baseField, ...(field.format && { format: field.format }) }
+      default:
+        return baseField
     }
   })
 })
@@ -116,15 +159,59 @@ const validateSchema = () => {
 }
 
 const addField = (type) => {
-  formSchema.value.fields.push({
+  const baseField = {
     id: `field_${Date.now()}`,
     type,
     label: '',
     placeholder: '',
     required: false,
-    validation: {},
-    options: type === 'select' ? ['Option 1', 'Option 2'] : []
-  })
+    validation: {}
+  }
+
+  // Special handling for different field types
+  switch(type) {
+    case 'select':
+    case 'radio':
+      formSchema.value.fields.push({
+        ...baseField,
+        options: ['Option 1', 'Option 2']
+      })
+      break
+    case 'checkbox':
+      formSchema.value.fields.push({
+        ...baseField,
+        options: ['Option 1', 'Option 2'],
+        multiple: true
+      })
+      break
+    case 'date':
+      formSchema.value.fields.push({
+        ...baseField,
+        validation: { pattern: '/^d{4}-d{2}-d{2}$/' } 
+      })
+      break
+    case 'email':
+      formSchema.value.fields.push({
+        ...baseField,
+        validation: { pattern: '/^[a-zA-Z0–9._%+-]+@[a-zA-Z0–9.-]+\.[a-zA-Z]{2,}$/' } 
+      })
+      break
+    case 'tel':
+      formSchema.value.fields.push({
+        ...baseField,
+        validation: { pattern: '/\+?[0-9s-]{6,}$/' }
+      })
+      break
+    case 'url':
+      formSchema.value.fields.push({
+        ...baseField,
+        validation: { pattern: '/^(https?://)?([da-z.-]+).([a-z.]{2,6})([/w.-]*)*/?$/' }
+      })
+      break
+    default:
+      formSchema.value.fields.push(baseField)
+  }
+  
   saveSchema()
 }
 
@@ -383,8 +470,7 @@ onMounted(loadSchema);
                   <USwitch v-model="field.required" />
                 </UFormField>
 
-                <!-- Options for select fields -->
-                <UFormField v-if="field.type === 'select'" label="Options">
+                <UFormField v-if="['select', 'radio', 'checkbox'].includes(field.type)" label="Options">
                   <div class="space-y-2">
                     <div v-for="(option, i) in field.options" :key="i" class="flex items-center gap-2">
                       <UInput class="w-full" v-model="field.options[i]" />
@@ -394,6 +480,7 @@ onMounted(loadSchema);
                         variant="ghost"
                         size="xs"
                         @click="field.options.splice(i, 1)"
+                        :disabled="field.type === 'checkbox' && field.options.length <= 1"
                       />
                     </div>
                     <UButton
@@ -404,6 +491,23 @@ onMounted(loadSchema);
                       @click="field.options.push('')"
                     />
                   </div>
+                </UFormField>
+
+                <!-- Multiple selection for checkboxes -->
+                <UFormField v-if="field.type === 'checkbox'" label="Multiple Selection">
+                  <USwitch v-model="field.multiple" />
+                </UFormField>
+
+                <!-- Date format configuration -->
+                <UFormField v-if="field.type === 'date'" label="Date Format">
+                  <USelect 
+                    v-model="field.format"
+                    :items="[
+                      { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+                      { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+                      { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY' }
+                    ]"
+                  />
                 </UFormField>
 
                 <!-- Updated Validation Rules Section -->
@@ -460,7 +564,7 @@ onMounted(loadSchema);
             </FormKit>
           </div>
           <template #footer>
-            <p class="text-xs text-gray-500">This is a live rendering using the generated FormKit schema.</p>
+            <p class="text-xs text-gray-500">This is a live rendering using the generated FormKit schema. It may not always be accurate</p>
           </template>
         </UCard>
 
