@@ -51,16 +51,25 @@ onMounted(async () => {
 
 <template>
   <UContainer class="max-w-3xl py-8">
-    <UButton
-      to="/"
-      icon="i-heroicons-arrow-left"
-      variant="ghost"
-      color="gray"
-      class="mb-6"
-      :disabled="isLoading"
-    >
-      Back to Listings
-    </UButton>
+    <div class="flex justify-between items-center mb-6">
+      <UButton
+        to="/"
+        icon="i-heroicons-arrow-left"
+        variant="ghost"
+        color="gray"
+        :disabled="isLoading"
+      >
+        Back to Listings
+      </UButton>
+      <UButton
+        :to="`/jobs/${route.params.slug}/apply`"
+        trailing-icon="i-heroicons-arrow-up-right-solid"
+        color="primary"
+        :disabled="isLoading"
+      >
+        Apply
+      </UButton>
+    </div>
 
     <!-- Loading State -->
     <template v-if="isLoading">

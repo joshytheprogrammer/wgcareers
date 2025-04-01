@@ -86,14 +86,27 @@ function removeItem(array, index) {
 
     <UCard>
       <template #header>
-        <div class="flex items-center gap-3">
-          <UIcon 
-            name="i-heroicons-briefcase" 
-            class="w-6 h-6 text-primary-500" 
-          />
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-            {{ route.params.id === 'new' ? 'Create New' : 'Edit' }} Job Listing
-          </h2>
+        <div class="flex justify-between">
+          <div class="flex items-center gap-3">
+            <UIcon 
+              name="i-heroicons-briefcase" 
+              class="w-6 h-6 text-primary-500" 
+            />
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+              {{ route.params.id === 'new' ? 'Create New' : 'Edit' }} Job Listing
+            </h2>
+          </div>
+          <div class="items-center">
+            <UButton
+              :to="`/admin/jobs/${route.params.id}/form-builder`"
+              trailing-icon="i-heroicons-arrow-right"
+              variant="ghost"
+              color="gray"
+              :disabled="isLoading"
+            >
+              Build Form
+            </UButton>
+          </div>
         </div>
       </template>
 
@@ -247,11 +260,6 @@ function removeItem(array, index) {
             color="gray"
             label="Cancel"
             :disabled="isLoading"
-          />
-          <UButton
-            :to="`/admin/jobs/${route.params.id}/form-builder`"
-            label="Manage Form"
-            color="secondary"
           />
           
           <UButton
