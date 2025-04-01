@@ -10,14 +10,10 @@ export default defineFormKitConfig({
       global: { // applies to all input types
         outer: 'max-w-full'
       },
-      // text: { // only applies to text input type
-      //   outer: 'bizz',
-      //   input: '$reset fizz'
-      // },
-      // email: { // only applies to email input type
-      //   outer: 'bap',
-      //   input: '$reset bop'
-      // }
+      checkbox: {
+        input: 'hidden peer', // Only need to hide the native input and establish peer relationship
+        decorator: 'peer-checked:bg-indigo-600 peer-checked:border-indigo-600' // Only override checked state colors
+      }
     })
   }
 })
