@@ -141,7 +141,7 @@ onMounted(async () => {
             Description
           </h2>
           <div 
-            class="prose dark:prose-invert max-w-none editor-div" 
+            class="prose prose-sm sm:prose-base dark:prose-invert max-w-none editor-div" 
             v-html="job.description_html || '<p>No description provided</p>'"
           />
         </div>
@@ -186,7 +186,7 @@ onMounted(async () => {
             How to Apply
           </h2>
           <div 
-            class="prose dark:prose-invert max-w-none editor-div" 
+            class="prose prose-sm sm:prose-base dark:prose-invert max-w-none editor-div" 
             v-html="job.application_instructions_html || '<p>Application instructions not provided</p>'"
           />
         </div>
