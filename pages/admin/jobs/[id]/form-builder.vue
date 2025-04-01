@@ -42,9 +42,23 @@ const formKitSchema = computed(() => {
     
     for (const [rule, value] of Object.entries(field.validation)) {
       switch(rule) {
-        case 'minLength': validationRules.push(`length:${value}`); break;
-        case 'maxLength': validationRules.push(`length:${value}`); break;
-        case 'pattern': validationRules.push(`matches:${value}`); break;
+        case 'minLength': validationRules.push(`length:${value},${field.validation.maxLength || ''}`); break;
+        case 'maxLength': 
+          // If minLength exists, it's already handled in the case above
+          if (!field.validation.minLength) validationRules.push(`length:0,${value}`);
+          break;
+        case 'pattern': 
+          // Proper regex handling - remove delimiters if present
+          let regex = value;
+          // if (regex.startsWith('/') && regex.endsWith('/')) {
+          //   regex = regex.slice(1, -1);
+          // }
+          validationRules.push(`matches:${regex}`);
+          break;
+        case 'min': validationRules.push(`number:${value},${field.validation.max || ''}`); break;
+        case 'max': 
+          if (!field.validation.min) validationRules.push(`number:0,${value}`);
+          break;
         default: validationRules.push(`${rule}:${value}`);
       }
     }
@@ -138,7 +152,7 @@ const addValidation = (field, ruleValue) => {
       field.validation[ruleValue] = 100
       break
     case 'pattern':
-      field.validation[ruleValue] = '.*' // Default regex
+      field.validation[ruleValue] = '/^[a-zA-Z0-9]+$/' // Default regex
       break
     case 'min':
       field.validation[ruleValue] = 0
