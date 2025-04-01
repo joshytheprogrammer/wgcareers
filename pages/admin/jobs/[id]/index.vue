@@ -100,11 +100,10 @@ function removeItem(array, index) {
             <UButton
               :to="`/admin/jobs/${route.params.id}/form-builder`"
               trailing-icon="i-heroicons-arrow-right"
-              variant="ghost"
-              color="gray"
+              color="primary"
               :disabled="isLoading"
             >
-              Build Form
+              Form Builder
             </UButton>
           </div>
         </div>

@@ -12,6 +12,10 @@
   --ui-primary: white;
 }
 
+.SHAZAM {
+  /* width: clamp(50%, 75%, 80%); */
+}
+
 * {
   box-sizing: border-box;
   scroll-behavior: smooth;

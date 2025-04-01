@@ -120,7 +120,7 @@ onMounted(fetchJob);
     <!-- Job Application Form -->
     <div v-else-if="job" class="max-w-3xl mx-auto">
       <!-- Job Header -->
-      <div class="mb-12 text-center">
+      <div class="mb-8 text-center">
         <UBadge 
           v-if="job.type"
           :label="job.type" 
@@ -142,6 +142,15 @@ onMounted(fetchJob);
             <span>{{ job.location }}</span>
           </div>
         </div>
+
+        <UButton
+          :to="`/jobs/${route.params.slug}`" 
+          label="Back to Job Listing"
+          icon="i-heroicons-arrow-left"
+          color="gray"
+          variant="ghost"
+          class="mt-4"
+        />
       </div>
 
       <!-- Application Form -->
@@ -169,7 +178,7 @@ onMounted(fetchJob);
           </div>
         </template>
 
-        <div class="px-1 sm:px-4 flex justify-center ">
+        <div class="px-1 sm:px-4 flex justify-center form-container">
           <FormKit
             type="form"
             @submit="submitApplication"
@@ -180,7 +189,7 @@ onMounted(fetchJob);
               :schema="job.formKitSchema"
             />
 
-            <div class="mt-8 pb-4">
+            <div class="mt-8 pb-4 text-center">
               <UButton
                 type="submit"
                 label="Submit Application"
@@ -188,7 +197,7 @@ onMounted(fetchJob);
                 icon="i-heroicons-paper-airplane"
                 size="xl"
                 color="primary"
-                class="px-8 py-3 text-lg font-medium cursor-pointer"
+                class="px-8 py-3 mx-auto text-lg font-medium cursor-pointer w-full flex justify-center"
                 :disabled="isSubmitting"
               />
             </div>
@@ -203,8 +212,29 @@ onMounted(fetchJob);
               <span>{{ submissionError }}</span>
             </div>
           </div>
+          
         </div>
       </UCard>
     </div>
   </UContainer>
 </template>
+
+<style scoped>
+.form-container {
+  width: 100%;
+}
+
+.form-container > .formkit-form {
+  width: 100%;
+  min-width: min(100%, 450px);
+  max-width: 450px;
+  margin: 0 auto; /* center in larger containers */
+}
+
+/* For small screens */
+@media (max-width: 480px) {
+  .form-container > .formkit-form {
+    max-width: 100%;
+  }
+}
+</style>
