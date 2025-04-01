@@ -98,6 +98,7 @@ function removeItem(array, index) {
           </div>
           <div class="items-center">
             <UButton
+              v-if="route.params.id != 'new'"
               :to="`/admin/jobs/${route.params.id}/form-builder`"
               trailing-icon="i-heroicons-arrow-right"
               color="primary"
