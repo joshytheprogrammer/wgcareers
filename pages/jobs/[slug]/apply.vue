@@ -84,62 +84,125 @@ const submitApplication = async (formData) => {
 // Fetch job when component mounts
 onMounted(fetchJob);
 </script>
-
 <template>
-  <UContainer class="py-8">
+  <UContainer class="py-12 px-4 sm:px-6">
     <!-- Loading State -->
-    <div v-if="isLoading" class="text-center py-12">
-      <UIcon name="i-heroicons-arrow-path" class="w-12 h-12 mx-auto animate-spin" />
-      <p class="mt-4">Loading job details...</p>
+    <div v-if="isLoading" class="text-center py-16">
+      <UIcon 
+        name="i-heroicons-arrow-path" 
+        class="w-16 h-16 mx-auto animate-spin text-primary-500" 
+      />
+      <p class="mt-6 text-lg font-medium text-gray-700">Loading job details...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-12">
-      <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 mx-auto text-red-500" />
-      <h1 class="text-xl font-bold mt-4">Job Not Found</h1>
-      <p class="text-gray-600 mt-2">{{ error }}</p>
-      <UButton to="/" label="Browse Jobs" class="mt-4" />
+    <div v-else-if="error" class="text-center py-16">
+      <div class="inline-flex items-center justify-center bg-red-50 dark:bg-red-900/20 p-4 rounded-full">
+        <UIcon 
+          name="i-heroicons-exclamation-triangle" 
+          class="w-16 h-16 text-red-500" 
+        />
+      </div>
+      <h1 class="mt-6 text-2xl font-bold text-gray-900 dark:text-white">Job Not Found</h1>
+      <p class="mt-3 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+        {{ error }}
+      </p>
+      <UButton 
+        to="/" 
+        label="Browse Available Positions" 
+        class="mt-6"
+        size="lg"
+        color="primary"
+        variant="solid"
+      />
     </div>
 
     <!-- Job Application Form -->
-    <div v-else-if="job" class="max-w-4xl mx-auto">
+    <div v-else-if="job" class="max-w-3xl mx-auto">
       <!-- Job Header -->
-      <div class="mb-8 text-center">
-        <h1 class="text-3xl font-bold">{{ job.title }}</h1>
-        <p class="text-gray-600 mt-2">{{ job.company }} • {{ job.location }}</p>
+      <div class="mb-12 text-center">
+        <UBadge 
+          v-if="job.type"
+          :label="job.type" 
+          color="primary"
+          variant="subtle"
+          size="lg"
+          class="mb-4"
+        />
+        <h1 class="text-4xl font-bold text-gray-900 dark:text-white">
+          {{ job.title }}
+        </h1>
+        <div class="mt-4 flex items-center justify-center gap-4 text-gray-600 dark:text-gray-300">
+          <div class="flex items-center gap-1.5">
+            <UIcon name="i-heroicons-building-office" class="w-5 h-5" />
+            <span>{{ job.company }}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <UIcon name="i-heroicons-map-pin" class="w-5 h-5" />
+            <span>{{ job.location }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Application Form -->
-      <UCard>
+      <UCard 
+        class="shadow-lg"
+        :ui="{
+          base: 'ring-1 ring-gray-200 dark:ring-gray-800',
+          rounded: 'rounded-xl',
+          header: {
+            base: 'border-b border-gray-200 dark:border-gray-800'
+          }
+        }"
+      >
         <template #header>
-          <h2 class="text-xl font-semibold">Application Form</h2>
-          <p v-if="job.formSchema?.description" class="text-sm text-gray-500 mt-1">
-            {{ job.formSchema.description }}
-          </p>
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+              Application Form
+            </h2>
+            <p 
+              v-if="job.formSchema?.description" 
+              class="mt-2 text-gray-600 dark:text-gray-300"
+            >
+              {{ job.formSchema.description }}
+            </p>
+          </div>
         </template>
 
-        <FormKit
-          type="form"
-          @submit="submitApplication"
-          :actions="false"
-        >
-          <FormKitSchema 
-            v-if="job.formKitSchema"
-            :schema="job.formKitSchema" 
-          />
-
-          <div class="mt-6 flex justify-end">
-            <UButton
-              type="submit"
-              label="Submit Application"
-              :loading="isSubmitting"
-              icon="i-heroicons-paper-airplane"
+        <div class="px-1 sm:px-4 flex justify-center ">
+          <FormKit
+            type="form"
+            @submit="submitApplication"
+            :actions="false"
+          >
+            <FormKitSchema 
+              v-if="job.formKitSchema"
+              :schema="job.formKitSchema"
             />
-          </div>
-        </FormKit>
 
-        <div v-if="submissionError" class="mt-4 text-red-500 text-sm">
-          {{ submissionError }}
+            <div class="mt-8 pb-4">
+              <UButton
+                type="submit"
+                label="Submit Application"
+                :loading="isSubmitting"
+                icon="i-heroicons-paper-airplane"
+                size="xl"
+                color="primary"
+                class="px-8 py-3 text-lg font-medium cursor-pointer"
+                :disabled="isSubmitting"
+              />
+            </div>
+          </FormKit>
+
+          <div 
+            v-if="submissionError" 
+            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm"
+          >
+            <div class="flex items-start gap-2">
+              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{{ submissionError }}</span>
+            </div>
+          </div>
         </div>
       </UCard>
     </div>
