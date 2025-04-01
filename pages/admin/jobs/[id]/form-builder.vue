@@ -7,6 +7,8 @@ const db = useFirestore()
 const route = useRoute()
 const toast = useToast()
 
+const initialLoad = ref(true);
+
 // Form schema structure
 const formSchema = ref({
   title: 'Job Application Form',
@@ -19,9 +21,7 @@ const formSchema = ref({
 const fieldTypes = [
   { value: 'text', label: 'Text Input', icon: 'i-heroicons-pencil' },
   { value: 'textarea', label: 'Text Area', icon: 'i-heroicons-document-text' },
-  { value: 'select', label: 'Dropdown', icon: 'i-heroicons-chevron-down' },
-  { value: 'checkbox', label: 'Checkbox', icon: 'i-heroicons-check-circle' },
-  { value: 'file', label: 'File Upload', icon: 'i-heroicons-paper-clip' }
+  { value: 'select', label: 'Select', icon: 'i-heroicons-chevron-down' },
 ]
 
 // Validation rule types (Deepseek version)
@@ -55,8 +55,7 @@ const formKitSchema = computed(() => {
       label: field.label,
       placeholder: field.placeholder,
       validation: validationRules.join('|'),
-      ...(field.type === 'select' && { options: field.options }),
-      ...(field.type === 'file' && { accept: field.accept })
+      ...(field.type === 'select' && { options: field.options })
     }
   })
 })
@@ -74,6 +73,8 @@ const loadSchema = async () => {
     }
   } catch (error) {
     toast.add({ title: 'Error loading form', description: error.message, color: 'red' })
+  }finally {
+    initialLoad.value = false;
   }
 }
 
@@ -87,7 +88,7 @@ const saveSchema = debounce(async () => {
   } catch (error) {
     toast.add({ title: 'Error saving form', description: error.message, color: 'red' })
   }
-}, 5000)
+}, 2000)
 
 // Deepseek's core functionality
 const validateSchema = () => {
@@ -206,7 +207,7 @@ onMounted(loadSchema);
       />
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div v-if="!initialLoad" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
       <!-- Deepseek Left Panel -->
       <div class="lg:col-span-1 space-y-4">
         <UCard>
@@ -334,7 +335,7 @@ onMounted(loadSchema);
           <div v-if="formSchema.fields.length === 0" class="text-center py-8 text-gray-500">
             <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto mb-4" />
             <p>No fields added yet</p>
-            <p class="text-sm">Drag fields from the left or click to add</p>
+            <p class="text-sm">Click fields from the left to add</p>
           </div>
 
           <div v-else class="space-y-6">
@@ -389,11 +390,6 @@ onMounted(loadSchema);
                       @click="field.options.push('')"
                     />
                   </div>
-                </UFormField>
-
-                <!-- File upload settings -->
-                <UFormField v-if="field.type === 'file'" label="Accepted File Types">
-                  <UInput class="w-full" v-model="field.accept" placeholder="e.g. .pdf,.docx or image/*" />
                 </UFormField>
 
                 <!-- Updated Validation Rules Section -->
@@ -465,6 +461,23 @@ onMounted(loadSchema);
             <p class="text-xs text-gray-500">This JSON is what gets saved as `formKitSchema` in Firebase.</p>
           </template>
         </UCard>
+      </div>
+    </div>
+    <!-- Loading State -->
+    <div v-else class="flex flex-col items-center justify-center py-16 space-y-6">
+      <UIcon 
+        name="i-heroicons-arrow-path" 
+        class="w-12 h-12 text-primary-500 animate-spin" 
+      />
+      <div class="text-center space-y-2">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Loading Form Builder</h2>
+        <p class="text-gray-500 dark:text-gray-400">Preparing your editing environment...</p>
+      </div>
+      <div class="w-full max-w-md bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
+        <div 
+          class="bg-primary-500 h-2.5 rounded-full animate-pulse" 
+          style="width: 45%"
+        ></div>
       </div>
     </div>
   </UContainer>

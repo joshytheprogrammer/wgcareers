@@ -167,7 +167,7 @@ onMounted(fetchJob);
         <template #header>
           <div class="text-center">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-              Application Form
+              {{ job.formSchema.title }}
             </h2>
             <p 
               v-if="job.formSchema?.description" 
