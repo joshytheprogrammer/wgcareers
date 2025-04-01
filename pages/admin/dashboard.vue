@@ -167,7 +167,7 @@ function confirmDelete(job) {
           <div class="flex gap-2">
               <UTooltip text="View applications">
                 <UButton
-                  :to="`/admin/jobs/${job.id}/submissions`"
+                  :to="`/admin/jobs/${job.id}/applications`"
                   icon="i-heroicons-document-text"
                   color="primary"
                   :label="submissionsCount[job.id] || '0'"
