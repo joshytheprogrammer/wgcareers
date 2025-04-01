@@ -1,21 +1,24 @@
 <script setup>
 import { signOut } from 'firebase/auth'
-import { collection, deleteDoc, doc, onSnapshot } from 'firebase/firestore'
+import { collection, deleteDoc, doc, onSnapshot, getDocs } from 'firebase/firestore'
 const auth = useFirebaseAuth()
 const db = useFirestore()
 
 const jobs = ref([])
+const submissionsCount = ref({})
 const error = ref('')
 const isLoading = ref(true)
 const searchQuery = ref('')
 
 // Realtime jobs listener
 onMounted(() => {
-  const unsubscribe = onSnapshot(collection(db, 'jobs'), (snapshot) => {
+  const unsubscribe = onSnapshot(collection(db, 'jobs'), async (snapshot) => {
     jobs.value = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
+
+    await fetchSubmissionCounts()
     isLoading.value = false
   }, (err) => {
     error.value = err.message
@@ -24,6 +27,15 @@ onMounted(() => {
 
   return () => unsubscribe()
 })
+
+async function fetchSubmissionCounts() {
+  const counts = {}
+  for (const job of jobs.value) {
+    const submissions = await getDocs(collection(db, 'jobs', job.id, 'submissions'))
+    counts[job.id] = submissions.size
+  }
+  submissionsCount.value = counts
+}
 
 const filteredJobs = computed(() => {
   if (!searchQuery.value) return jobs.value
@@ -153,6 +165,14 @@ function confirmDelete(job) {
           </div>
 
           <div class="flex gap-2">
+              <UTooltip text="View applications">
+                <UButton
+                  :to="`/admin/jobs/${job.id}/submissions`"
+                  icon="i-heroicons-document-text"
+                  color="primary"
+                  :label="submissionsCount[job.id] || '0'"
+                />
+            </UTooltip>
             <UButton
               :to="`/admin/jobs/${job.id}`"
               icon="i-heroicons-pencil"
