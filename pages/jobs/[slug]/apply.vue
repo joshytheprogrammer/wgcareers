@@ -1,94 +1,95 @@
 <!-- pages/[slug]/apply.vue -->
 <script setup>
-import { doc, getDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore'
+import { useFirestore } from 'vuefire'
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
+
 const db = useFirestore()
 const route = useRoute()
 const toast = useToast()
 
-// Job and form state
+// State
 const job = ref(null)
 const isLoading = ref(true)
-const error = ref(null)
-
-// Form submission state
+const loadError = ref(null)
 const isSubmitting = ref(false)
 const submissionError = ref(null)
+const submissionSuccess = ref(false)
 
-// Fetch job by slug
+// Computed
+const jobId = computed(() => {
+  const slug = route.params.slug
+  return Array.isArray(slug) ? slug[0] : slug
+})
+
+const isFormLive = computed(() => job.value?.formSchema?.formStatus == 'live')
+
+// Functions
 const fetchJob = async () => {
+  isLoading.value = true
+  loadError.value = null
+  job.value = null
+
+  if (!jobId.value) {
+    loadError.value = 'Job identifier is missing in the URL.'
+    isLoading.value = false
+    return
+  }
+
   try {
-    isLoading.value = true
-    error.value = null
-    
-    const q = query(
-      collection(db, 'jobs'),
-      where('slug', '==', route.params.slug)
-    )
-    
+    const q = query(collection(db, 'jobs'), where('slug', '==', jobId.value))
     const querySnapshot = await getDocs(q)
-    
+
     if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0]
-      job.value = {
-        id: doc.id,
-        ...doc.data()
-      }
+      const docSnap = querySnapshot.docs[0]
+      job.value = { id: docSnap.id, ...docSnap.data() }
     } else {
-      throw new Error('Job not found')
+      loadError.value = `No job found matching "${jobId.value}"`
     }
   } catch (err) {
-    error.value = err.message
+    loadError.value = 'Error fetching job details'
+    toast.add({ title: 'Error', description: err.message, color: 'red' })
   } finally {
     isLoading.value = false
   }
 }
 
-const isFormLive = computed(() => job.value?.formSchema?.formStatus === 'live')
+const submitApplication = async (formData, node) => {
+  if (isSubmitting.value || !job.value?.id) return
 
-// Submit handler
-const submitApplication = async (formData) => {
+  isSubmitting.value = true
+  submissionError.value = null
+  submissionSuccess.value = false
+
   try {
-    isSubmitting.value = true
-    submissionError.value = null
-
-    // Create submission record
-    await addDoc(collection(db, 'jobs', job.value.id, 'submissions'), {
-      formData: formData,
-      submittedAt: new Date(),
+    const submissionsColRef = collection(db, 'jobs', job.value.id, 'submissions')
+    await addDoc(submissionsColRef, {
+      formData,
+      submittedAt: serverTimestamp(),
       status: 'new',
+      jobId: job.value.id,
+      jobTitle: job.value.title || 'N/A',
       metadata: {
-        ip: '', // Can be set server-side
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent || 'N/A',
+        submittedFromUrl: window.location.href
       }
     })
 
-    toast.add({
-      title: 'Application submitted!',
-      description: 'Thank you for your application.',
-      color: 'green'
-    })
-
-    // Redirect to confirmation page
-    await navigateTo(`/${route.params.slug}/confirmation`)
-    
-  } catch (error) {
-    submissionError.value = error.message
-    toast.add({
-      title: 'Submission failed',
-      description: error.message,
-      color: 'red'
-    })
+    toast.add({ title: 'Success!', description: 'Application submitted', color: 'green' })
+    submissionSuccess.value = true
+    node.reset()
+  } catch (err) {
+    submissionError.value = 'Error submitting application'
+    toast.add({ title: 'Error', description: err.message, color: 'red' })
   } finally {
     isSubmitting.value = false
   }
 }
 
-// Fetch job when component mounts
 onMounted(fetchJob);
 </script>
 <template>
   <UContainer class="py-12 px-4 sm:px-6">
-    <!-- Loading State -->
+    <!-- Loading State (Combined) -->
     <div v-if="isLoading" class="text-center py-16">
       <UIcon 
         name="i-heroicons-arrow-path" 
@@ -97,17 +98,17 @@ onMounted(fetchJob);
       <p class="mt-6 text-lg font-medium text-gray-700">Loading job details...</p>
     </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center py-16">
+    <!-- Error State (Gemini style with Deepseek elements) -->
+    <div v-else-if="loadError" class="text-center py-16">
       <div class="inline-flex items-center justify-center bg-red-50 dark:bg-red-900/20 p-4 rounded-full">
         <UIcon 
           name="i-heroicons-exclamation-triangle" 
           class="w-16 h-16 text-red-500" 
         />
       </div>
-      <h1 class="mt-6 text-2xl font-bold text-gray-900 dark:text-white">Job Not Found</h1>
+      <h1 class="mt-6 text-2xl font-bold text-gray-900 dark:text-white">Error Loading Job</h1>
       <p class="mt-3 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-        {{ error }}
+        {{ loadError }}
       </p>
       <UButton 
         to="/" 
@@ -119,6 +120,26 @@ onMounted(fetchJob);
       />
     </div>
 
+    <!-- Success State (Gemini) -->
+    <div v-else-if="submissionSuccess" class="text-center py-16 max-w-lg mx-auto">
+      <div class="inline-flex items-center justify-center bg-green-50 dark:bg-green-900/20 p-4 rounded-full mb-6">
+        <UIcon name="i-heroicons-check-badge" class="w-16 h-16 text-green-500" />
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Application Submitted!</h1>
+      <p class="mt-4 text-lg text-gray-600 dark:text-gray-300">
+        Thank you for applying for the <strong>{{ job?.title || 'position' }}</strong>. We have received your application and will be in touch if your qualifications match our requirements.
+      </p>
+      <UButton
+        to="/"
+        label="Browse More Jobs"
+        class="mt-8"
+        size="lg"
+        color="primary"
+        variant="solid"
+      />
+    </div>
+
+    <!-- Form Closed State (Combined) -->
     <div v-else-if="job && !isFormLive" class="text-center py-16">
       <div class="inline-flex items-center justify-center bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-full">
         <UIcon 
@@ -140,9 +161,9 @@ onMounted(fetchJob);
       />
     </div>
 
-    <!-- Job Application Form -->
-    <div v-else-if="job && isFormLive" class="max-w-3xl mx-auto">
-      <!-- Job Header -->
+    <!-- Job Application Form (Combined best of both) -->
+    <div v-else-if="job && job.formKitSchema" class="max-w-3xl mx-auto">
+      <!-- Job Header (Deepseek style) -->
       <div class="mb-8 text-center">
         <UBadge 
           v-if="job.type"
@@ -152,10 +173,10 @@ onMounted(fetchJob);
           size="lg"
           class="mb-4"
         />
-        <h1 class="text-4xl font-bold text-gray-900 dark:text-white">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
           {{ job.title }}
         </h1>
-        <div class="mt-4 flex items-center justify-center gap-4 text-gray-600 dark:text-gray-300">
+        <div class="mt-4 flex flex-wrap items-center justify-center gap-4 text-gray-600 dark:text-gray-300">
           <div class="flex items-center gap-1.5">
             <UIcon name="i-heroicons-building-office" class="w-5 h-5" />
             <span>{{ job.company }}</span>
@@ -165,7 +186,7 @@ onMounted(fetchJob);
             <span>{{ job.location }}</span>
           </div>
         </div>
-
+        
         <UButton
           :to="`/jobs/${route.params.slug}`" 
           label="Back to Job Listing"
@@ -176,7 +197,7 @@ onMounted(fetchJob);
         />
       </div>
 
-      <!-- Application Form -->
+      <!-- Application Form (Gemini structure with Deepseek styling) -->
       <UCard 
         class="shadow-lg"
         :ui="{
@@ -189,7 +210,7 @@ onMounted(fetchJob);
       >
         <template #header>
           <div class="text-center">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {{ job.formSchema.title }}
             </h2>
             <p 
@@ -206,6 +227,7 @@ onMounted(fetchJob);
             type="form"
             @submit="submitApplication"
             :actions="false"
+            #default="{ state: { valid } }"
           >
             <FormKitSchema 
               v-if="job.formKitSchema"
@@ -221,26 +243,45 @@ onMounted(fetchJob);
                 size="xl"
                 color="primary"
                 class="px-8 py-3 mx-auto text-lg font-medium cursor-pointer w-full flex justify-center"
-                :disabled="isSubmitting"
+                :disabled="isSubmitting || !valid"
               />
             </div>
           </FormKit>
-
-          <div 
-            v-if="submissionError" 
-            class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm"
-          >
-            <div class="flex items-start gap-2">
-              <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span>{{ submissionError }}</span>
-            </div>
+        </div>
+  
+        <div 
+          v-if="submissionError" 
+          class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 dark:text-red-400 text-sm"
+        >
+          <div class="flex items-start gap-2">
+            <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>{{ submissionError }}</span>
           </div>
-          
         </div>
       </UCard>
     </div>
+
+    <!-- Fallback Error (Gemini) -->
+    <div v-else class="text-center py-16">
+      <div class="inline-flex items-center justify-center bg-orange-50 dark:bg-orange-900/20 p-4 rounded-full">
+        <UIcon name="i-heroicons-question-mark-circle" class="w-16 h-16 text-orange-500" />
+      </div>
+      <h1 class="mt-6 text-2xl font-bold text-gray-900 dark:text-white">Application Unavailable</h1>
+      <p class="mt-3 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+        The application form for this job could not be displayed at this time.
+      </p>
+      <UButton
+        to="/"
+        label="Browse Available Positions"
+        class="mt-6"
+        size="lg"
+        color="primary"
+        variant="solid"
+      />
+    </div>
   </UContainer>
 </template>
+
 
 <style scoped>
 .form-container {
