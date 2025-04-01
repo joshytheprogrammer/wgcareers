@@ -8,6 +8,7 @@ const route = useRoute()
 const toast = useToast()
 
 const initialLoad = ref(true);
+const lastSavedSchema = ref(null); // Track last saved state
 
 // Form schema structure
 const formSchema = ref({
@@ -17,7 +18,7 @@ const formSchema = ref({
   conditions: []
 })
 
-// Available field types (updated with new types)
+// Available field types
 const fieldTypes = [
   { value: 'text', label: 'Text Input', icon: 'i-heroicons-pencil' },
   { value: 'textarea', label: 'Text Area', icon: 'i-heroicons-document-text' },
@@ -30,247 +31,238 @@ const fieldTypes = [
   { value: 'radio', label: 'Radio', icon: 'i-heroicons-radio' }
 ]
 
-// Validation rule types (Deepseek version)
+// Simplified validation types
 const validationTypes = [
-  { value: 'required', label: 'Required' },
-  { value: 'minLength', label: 'Minimum Length' },
-  { value: 'maxLength', label: 'Maximum Length' },
-  { value: 'pattern', label: 'Regex Pattern' },
-  { value: 'min', label: 'Minimum Value' },
-  { value: 'max', label: 'Maximum Value' },
-  { 
-    value: 'email', 
-    label: 'Email Format', 
-    // pattern: '/^[a-zA-Z0–9._%+-]+@[a-zA-Z0–9.-]+\.[a-zA-Z]{2,}$/' 
-  },
-  { 
-    value: 'phone', 
-    label: 'Phone Format', 
-    // pattern: '/^+?[0-9s-]{6,}$/' 
-  },
-  { 
-    value: 'url', 
-    label: 'URL Format', 
-    // pattern: '/^(https?://)?([da-z.-]+).([a-z.]{2,6})([/w.-]*)*/?$/' 
-  },
-  { 
-    value: 'date', 
-    label: 'Date Format', 
-    // pattern: '/^d{4}-d{2}-d{2}$/' 
-  }
+  { value: 'minLength', label: 'Minimum Length', needsArg: true, argType: 'number', defaultArg: 5 },
+  { value: 'maxLength', label: 'Maximum Length', needsArg: true, argType: 'number', defaultArg: 100 },
+  { value: 'pattern', label: 'Regex Pattern', needsArg: true, argType: 'text' },
+  { value: 'min', label: 'Minimum Value', needsArg: true, argType: 'number', defaultArg: 0 },
+  { value: 'max', label: 'Maximum Value', needsArg: true, argType: 'number', defaultArg: 100 },
 ]
 
-// Gemini's schema generation logic
+// Simplified schema generation
 const formKitSchema = computed(() => {
   return formSchema.value.fields.map(field => {
-    const validationRules = []
-    if (field.required) validationRules.push('required')
+    if (!field || !field.id || !field.type) return null;
+
+    const validationRules = [];
     
-    for (const [rule, value] of Object.entries(field.validation)) {
+    // Handle required state (only from toggle)
+    if (field.required) validationRules.push('required');
+    
+    // Handle built-in type validation (optional but good practice)
+    if (field.type === 'email') validationRules.push('email');
+    if (field.type === 'url') validationRules.push('url');
+    if (field.type === 'date') validationRules.push('date');
+
+
+    // Process validation rules
+    for (const [rule, value] of Object.entries(field.validation || {})) {
       switch(rule) {
-        case 'minLength': validationRules.push(`length:${value},${field.validation.maxLength || ''}`); break;
+        case 'minLength': 
+          validationRules.push(`length:${value},${field.validation.maxLength || ''}`);
+          break;
         case 'maxLength': 
           if (!field.validation.minLength) validationRules.push(`length:0,${value}`);
           break;
         case 'pattern': 
-          let regex = value;
-          // if (regex.startsWith('/') && regex.endsWith('/')) {
-          //   regex = regex.slice(1, -1);
-          // }
-          validationRules.push(`matches:${regex}`);
+          if (typeof value === 'string' && value.trim()) {
+            validationRules.push(`matches:${value.trim()}`);
+          }
           break;
-        case 'min': validationRules.push(`number:${value},${field.validation.max || ''}`); break;
+        case 'min': 
+          validationRules.push(`number:${value},${field.validation.max || ''}`);
+          break;
         case 'max': 
           if (!field.validation.min) validationRules.push(`number:0,${value}`);
           break;
-        default: validationRules.push(`${rule}:${value}`);
       }
     }
 
+    // Base field config
     const baseField = {
       $formkit: field.type,
       name: field.id,
       label: field.label,
       placeholder: field.placeholder,
-      validation: validationRules.join('|'),
-    }
+      validation: validationRules.join('|') || undefined,
+    };
 
-    // Special handling for different field types
+    // Type-specific handling
     switch(field.type) {
       case 'select':
       case 'radio':
-        return { ...baseField, options: field.options }
-      case 'checkbox':
         return { 
           ...baseField, 
-          options: field.options.reduce((obj, option, index) => {
-            obj[`option${index}`] = option
-            return obj
-          }, {}),
-          multiple: field.multiple
-        }
-      case 'date':
-        return { ...baseField, ...(field.format && { format: field.format }) }
+          options: Array.isArray(field.options) 
+            ? field.options.map(opt => String(opt).trim()).filter(opt => opt)
+            : [] 
+        };
+      case 'checkbox':
+        return Array.isArray(field.options) && field.options.length > 0
+          ? { ...baseField, options: field.options }
+          : baseField;
       default:
-        return baseField
+        return baseField;
     }
-  })
-})
+  }).filter(field => field !== null);
+});
 
-// Deepseek's Firebase integration
+// Firebase integration with change detection
 const loadSchema = async () => {
   try {
-    const docRef = doc(db, 'jobs', route.params.id)
-    const docSnap = await getDoc(docRef)
+    const docRef = doc(db, 'jobs', route.params.id);
+    const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      const data = docSnap.data()
-      if (data.formSchema) formSchema.value = data.formSchema
-      if (data.formKitSchema) formKitSchema.value = data.formKitSchema
+      const data = docSnap.data();
+      if (data.formSchema) {
+        formSchema.value = data.formSchema;
+        lastSavedSchema.value = JSON.stringify(data.formSchema); // Store last saved state
+      }
     }
   } catch (error) {
-    toast.add({ title: 'Error loading form', description: error.message, color: 'red' })
-  }finally {
+    toast.add({ 
+      title: 'Error loading form', 
+      description: error.message, 
+      color: 'red' 
+    });
+  } finally {
     initialLoad.value = false;
   }
-}
+};
 
 const saveSchema = debounce(async () => {
+  // Don't save if no changes detected
+  const currentSchema = JSON.stringify(formSchema.value);
+  if (lastSavedSchema.value === currentSchema) {
+    return;
+  }
+
+  if (!validateSchema()) return;
+  
   try {
-    await setDoc(doc(db, 'jobs', route.params.id), {
-      formSchema: formSchema.value,
-      formKitSchema: formKitSchema.value
-    }, { merge: true })
-    toast.add({ title: 'Form saved', color: 'green' })
+    const dataToSave = {
+      formSchema: JSON.parse(currentSchema),
+      formKitSchema: JSON.parse(JSON.stringify(formKitSchema.value))
+    };
+
+    await setDoc(doc(db, 'jobs', route.params.id), dataToSave, { merge: true });
+    
+    lastSavedSchema.value = currentSchema; // Update last saved state
+    
+    toast.add({ 
+      title: 'Form saved', 
+      color: 'green',
+      timeout: 2000
+    });
   } catch (error) {
-    toast.add({ title: 'Error saving form', description: error.message, color: 'red' })
+    toast.add({ 
+      title: 'Error saving form', 
+      description: error.message, 
+      color: 'red' 
+    });
   }
-}, 2000)
+}, 2000);
 
-// Deepseek's core functionality
+// Validation
 const validateSchema = () => {
-  const fieldIds = formSchema.value.fields.map(f => f.id)
-  const duplicateIds = fieldIds.filter((id, index) => fieldIds.indexOf(id) !== index)
+  const fieldIds = formSchema.value.fields.map(f => f.id?.trim()).filter(id => id);
+  const duplicateIds = fieldIds.filter((id, index) => fieldIds.indexOf(id) !== index);
+  
   if (duplicateIds.length) {
-    toast.add({ title: 'Validation error', description: `Duplicate IDs: ${duplicateIds.join(', ')}`, color: 'red' })
-    return false
+    toast.add({ 
+      title: 'Validation error', 
+      description: `Duplicate IDs: ${duplicateIds.join(', ')}`, 
+      color: 'red',
+      timeout: 5000
+    });
+    return false;
   }
-  return true
-}
+  
+  const invalidFields = formSchema.value.fields.filter(f => !f.id?.trim() || !f.label?.trim());
+  if (invalidFields.length) {
+    toast.add({ 
+      title: 'Validation error', 
+      description: `Fields must have both ID and Label`, 
+      color: 'red',
+      timeout: 5000
+    });
+    return false;
+  }
+  
+  return true;
+};
 
+// Field management
 const addField = (type) => {
+  const uniquePart = Math.random().toString(36).substring(2, 9);
+  const baseId = `${type}_${uniquePart}`;
+  const fieldConfig = fieldTypes.find(t => t.value === type);
+
   const baseField = {
-    id: `field_${Date.now()}`,
+    id: baseId,
     type,
-    label: '',
+    label: fieldConfig ? `New ${fieldConfig.label}` : 'New Field',
     placeholder: '',
     required: false,
     validation: {}
-  }
+  };
 
-  // Special handling for different field types
+  // Type-specific defaults
   switch(type) {
     case 'select':
     case 'radio':
-      formSchema.value.fields.push({
-        ...baseField,
-        options: ['Option 1', 'Option 2']
-      })
-      break
+      formSchema.value.fields.push({ ...baseField, options: ['Option 1', 'Option 2'] });
+      break;
     case 'checkbox':
-      formSchema.value.fields.push({
-        ...baseField,
+      formSchema.value.fields.push({ 
+        ...baseField, 
         options: ['Option 1', 'Option 2'],
-        multiple: true
-      })
-      break
-    case 'date':
-      formSchema.value.fields.push({
-        ...baseField,
-        validation: { pattern: '/^d{4}-d{2}-d{2}$/' } 
-      })
-      break
-    case 'email':
-      formSchema.value.fields.push({
-        ...baseField,
-        validation: { pattern: '/^[a-zA-Z0–9._%+-]+@[a-zA-Z0–9.-]+\.[a-zA-Z]{2,}$/' } 
-      })
-      break
-    case 'tel':
-      formSchema.value.fields.push({
-        ...baseField,
-        validation: { pattern: '/\+?[0-9s-]{6,}$/' }
-      })
-      break
-    case 'url':
-      formSchema.value.fields.push({
-        ...baseField,
-        validation: { pattern: '/^(https?://)?([da-z.-]+).([a-z.]{2,6})([/w.-]*)*/?$/' }
-      })
-      break
+        multiple: true 
+      });
+      break;
     default:
-      formSchema.value.fields.push(baseField)
+      formSchema.value.fields.push(baseField);
   }
-  
-  saveSchema()
-}
+};
 
 const removeField = (index) => {
-  formSchema.value.fields.splice(index, 1)
-  saveSchema()
-}
+  formSchema.value.fields.splice(index, 1);
+};
 
-const newValidation = ref(null);
+// Validation management
+const newValidation = ref({});
 
-// Modified addValidation function
 const addValidation = (field, ruleValue) => {
-  if (!ruleValue) return // Skip if no rule selected
+  if (!ruleValue || !field) return;
   
-  if (!field.validation) field.validation = {}
-  
-  switch (ruleValue) {
-    case 'required':
-      field.validation[ruleValue] = true
-      break
-    case 'minLength':
-      field.validation[ruleValue] = 5 // Default value
-      break
-    case 'maxLength':
-      field.validation[ruleValue] = 100
-      break
-    case 'pattern':
-      field.validation[ruleValue] = '/^[a-zA-Z0-9]+$/' // Default regex
-      break
-    case 'min':
-      field.validation[ruleValue] = 0
-      break
-    case 'max':
-      field.validation[ruleValue] = 100
-      break
+  const ruleConfig = validationTypes.find(t => t.value === ruleValue);
+  if (!ruleConfig) return;
+
+  if (!field.validation) field.validation = {};
+
+  if (!field.validation[ruleValue]) {
+    field.validation[ruleValue] = ruleConfig.defaultArg ?? '';
   }
-  
-  newValidation.value = null // Clear the selection
-  saveSchema()
-}
-// Update validation rules display
+
+  if (newValidation.value[field.id]) {
+    newValidation.value[field.id] = null;
+  }
+};
+
 const getValidationLabel = (rule) => {
-  return validationTypes.find(t => t.value === rule)?.label || rule
-}
+  return validationTypes.find(t => t.value === rule)?.label || rule;
+};
 
-// Remove a validation rule from a field
 const removeValidation = (field, rule) => {
-  if (field.validation && field.validation[rule] !== undefined) {
-    // Create a new validation object without the rule
-    const updatedValidation = {...field.validation}
-    delete updatedValidation[rule]
-    
-    // Assign the new object to trigger reactivity
-    field.validation = updatedValidation
-    
-    saveSchema()
-  }
-}
+  if (!field || !field.validation || field.validation[rule] === undefined) return;
+  
+  const { [rule]: _, ...rest } = field.validation;
+  field.validation = rest;
+};
 
+// Condition logic
 const addCondition = () => {
   formSchema.value.conditions.push({
     id: `cond_${Date.now()}`,
@@ -279,18 +271,19 @@ const addCondition = () => {
     value: '',
     action: 'show',
     targetFieldId: ''
-  })
-  saveSchema()
-}
+  });
+};
 
 const removeCondition = (index) => {
-  formSchema.value.conditions.splice(index, 1)
-  saveSchema()
-}
+  formSchema.value.conditions.splice(index, 1);
+};
 
+// Watch for changes with efficient saving
 watch(formSchema, () => {
-  if (validateSchema()) saveSchema()
-}, { deep: true })
+  if (!initialLoad.value) {
+    saveSchema();
+  }
+}, { deep: true });
 
 onMounted(loadSchema);
 </script>
