@@ -43,6 +43,8 @@ const fetchJob = async () => {
   }
 }
 
+const isFormLive = computed(() => job.value?.formSchema?.formStatus === 'live')
+
 // Submit handler
 const submitApplication = async (formData) => {
   try {
@@ -117,8 +119,29 @@ onMounted(fetchJob);
       />
     </div>
 
+    <div v-else-if="job && !isFormLive" class="text-center py-16">
+      <div class="inline-flex items-center justify-center bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-full">
+        <UIcon 
+          name="i-heroicons-exclamation-triangle" 
+          class="w-16 h-16 text-yellow-500" 
+        />
+      </div>
+      <h1 class="mt-6 text-2xl font-bold text-gray-900 dark:text-white">Application Closed</h1>
+      <p class="mt-3 text-gray-600 dark:text-gray-300 max-w-md mx-auto">
+        This job application is not currently accepting submissions.
+      </p>
+      <UButton 
+        to="/" 
+        label="Browse Available Positions" 
+        class="mt-6"
+        size="lg"
+        color="primary"
+        variant="solid"
+      />
+    </div>
+
     <!-- Job Application Form -->
-    <div v-else-if="job" class="max-w-3xl mx-auto">
+    <div v-else-if="job && isFormLive" class="max-w-3xl mx-auto">
       <!-- Job Header -->
       <div class="mb-8 text-center">
         <UBadge 

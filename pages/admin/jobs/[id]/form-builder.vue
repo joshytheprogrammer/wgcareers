@@ -14,6 +14,7 @@ const lastSavedSchema = ref(null); // Track last saved state
 const formSchema = ref({
   title: 'Job Application Form',
   description: '',
+  formStatus: 'draft',
   fields: [],
   conditions: []
 })
@@ -290,6 +291,7 @@ onMounted(loadSchema);
 
 <template>
   <UContainer class="py-8">
+    
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-2xl font-bold">Form Builder</h1>
       <UButton
@@ -328,12 +330,24 @@ onMounted(loadSchema);
           <template #header>
             <h2 class="font-semibold">Form Settings</h2>
           </template>
-          <UFormField label="Form Title">
-            <UInput class="w-full" v-model="formSchema.title" />
-          </UFormField>
-          <UFormField label="Description" class="mt-4">
-            <UTextarea class="w-full" v-model="formSchema.description" />
-          </UFormField>
+          <div class="space-y-4">
+            <UFormField label="Form Title">
+              <UInput class="w-full" v-model="formSchema.title" />
+            </UFormField>
+            <UFormField label="Description">
+              <UTextarea class="w-full" v-model="formSchema.description" />
+            </UFormField>
+            <UFormField label="Form Status">
+              <USelect 
+                v-model="formSchema.formStatus"
+                :items="[
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'live', label: 'Live' }
+                ]"
+                class="w-full"
+              />
+            </UFormField>
+          </div>
         </UCard>
 
         <!-- Conditional -->
