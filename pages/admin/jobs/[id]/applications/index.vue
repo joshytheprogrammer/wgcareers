@@ -94,10 +94,8 @@ const formatDisplayValue = (value) => {
 
 // --- Firestore Listener Variable ---
 let unsubscribe = null // Declare unsubscribe variable in the setup scope
-
-// --- Lifecycle Hooks ---
+ 
 onMounted(async () => {
-  // Dynamically import heavy libraries
   try {
     const apexModule = await import('vue3-apexcharts')
     VueApexCharts.value = apexModule.default
@@ -226,15 +224,15 @@ const filteredSubmissions = computed(() => {
         const startDate = new Date(range.start);
         const endDate = new Date(range.end);
         if (!isNaN(startDate) && !isNaN(endDate)) {
-            const subTime = sub.submittedAtDate.getTime();
-            const startTime = startDate.setHours(0, 0, 0, 0); // Start of the selected day
-            const endTime = endDate.setHours(23, 59, 59, 999); // End of the selected day
-            matchesDate = subTime >= startTime && subTime <= endTime;
+          const subTime = sub.submittedAtDate.getTime();
+          const startTime = startDate.setHours(0, 0, 0, 0); // Start of the selected day
+          const endTime = endDate.setHours(23, 59, 59, 999); // End of the selected day
+          matchesDate = subTime >= startTime && subTime <= endTime;
         } else {
-             matchesDate = false; // Invalid date range provided
+          matchesDate = false; // Invalid date range provided
         }
     } else if (range && range.start && range.end && !(sub.submittedAtDate instanceof Date)) {
-         matchesDate = false; // Exclude submissions without a valid date if range is set
+      matchesDate = false; // Exclude submissions without a valid date if range is set
     }
 
     // Combine all filters
@@ -320,151 +318,127 @@ const exportCSV = () => {
   saveAs(blob, `applications_${jobTitleSanitized}_${new Date().toISOString().split('T')[0]}.csv`)
 }
 
-const { $pdf } = useNuxtApp();
-
-const initPDF = () => {
-  $pdf.new({
-    margins: { 
-      top: 20, 
-      bottom: 20, 
-      left: 20, 
-      right: 20 
-    },
-    size: "A4",
-    plugins: [
-      {
-        page: [
-          // Footer with centered page numbers
-          ({ Text }, context, current, total) => {
-            Text(`Page ${current}/${total}`, 
-              { 
-                fontSize: 10, 
-                alignment: 'center' // Added text alignment
-              }, 
-              {
-                x: context.width / 2,
-                y: context.height - context.margins.bottom + 10
-              }
-            );
-          },
-          // Header with centered title
-          ({ Text }, context) => {
-            Text(`Application Details - ${job.value?.title || ''}`, 
-              { 
-                fontSize: 12, 
-                bold: true,
-                alignment: 'center' // Added text alignment
-              }, 
-              {
-                x: context.width / 2,
-                y: context.margins.top // Adjusted position to stay within margins
-              }
-            );
-          }
-        ]
-      }
-    ]
-  });
-};
-
 const exportSubmissionPDF = async (submission) => {
-  isGenerating.value = false;
-  
-  toast.add({ 
-    title: 'PDF Generation Failed', 
-    description: 'Please try again or contact support',
-    color: 'red',
-    timeout: 5000
-  });
+  isGenerating.value = true;
+  const toast = useToast();
 
+  try {
+    // 1. Sanitize filename
+    const applicantName = submission.formData?.fullName || submission.id;
+    const jobTitleSanitized = (job.value?.title || 'job').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const filename = `application_${jobTitleSanitized}_${applicantName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
 
-  // try {
-  //   initPDF();
-    
-  //   // Add main content
-  //   $pdf.add([
-  //     { 
-  //       raw: `Application ID: ${submission.id}`,
-  //       text: { fontSize: 16, bold: true, alignment: 'center' } 
-  //     },
-  //     { raw: '\n' },
-  //     { 
-  //       raw: `Status: ${submission.status || 'N/A'}`,
-  //       text: { fontSize: 14, alignment: 'center' }
-  //     },
-  //     { raw: '\n\n' }
-  //   ]);
+    // 2. Prepare content sections
+    const content = [
+      { text: job.value?.title || 'Job Application', style: 'header' },
+      { text: `Applicant: ${applicantName}`, style: 'subheader' },
+      { text: `Status: ${submission.status || 'N/A'}`, style: 'subheader' },
+      { text: `Submitted: ${submission.submittedAtDate?.toLocaleString() || 'N/A'}`, style: 'subheader' },
+      { text: '\n' },
+    ];
 
-  //   // Add form data with optimized structure
-  //   const formEntries = Object.entries(submission.formData) // Use submission parameter
-  //     .flatMap(([key, value]) => [
-  //       {
-  //         raw: `${getFieldLabel(key)}: ${formatDisplayValue(value)}`,
-  //         text: { fontSize: 12 }
-  //       },
-  //       { raw: '\n' } // Include newline directly in content
-  //     ]);
+    // 3. Add form fields with proper labels and formatting
+    if (submission.formData && job.value?.formSchema?.fields) {
+      // Group fields by sections if they exist in the form schema
+      const sections = job.value.formSchema.fields.reduce((acc, field) => {
+        const sectionName = field.section || 'General Information';
+        if (!acc[sectionName]) {
+          acc[sectionName] = [];
+        }
+        acc[sectionName].push(field);
+        return acc;
+      }, {});
 
-  //   $pdf.add(formEntries);
+      // Add each section to the PDF
+      for (const [sectionName, fields] of Object.entries(sections)) {
+        content.push({ text: sectionName, style: 'sectionHeader' });
+        
+        fields.forEach(field => {
+          const value = submission.formData[field.id];
+          const displayValue = formatDisplayValue(value);
+          
+          content.push(
+            { text: field.label || field.id, style: 'fieldLabel' },
+            { text: displayValue, style: 'fieldValue' },
+            { text: '\n' }
+          );
+        });
+        
+        content.push({ text: '\n' }); // Add space between sections
+      }
+    } else if (submission.formData) {
+      // Fallback if form schema isn't available
+      content.push({ text: 'Application Data', style: 'sectionHeader' });
+      for (const [key, value] of Object.entries(submission.formData)) {
+        content.push(
+          { text: getFieldLabel(key), style: 'fieldLabel' },
+          { text: formatDisplayValue(value), style: 'fieldValue' },
+          { text: '\n' }
+        );
+      }
+    } else {
+      content.push({ text: 'No application data available', style: 'fieldLabel' });
+    }
 
-  //   // Generate PDF
-  //   const result = await $pdf.run({
-  //     type: 'client',
-  //     clientEmit: 'blob',
-  //     colorSchema: 'RGB'
-  //   });
+    // 4. Define document styles
+    const documentDefinition = {
+      content: content,
+      styles: {
+        header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10],
+          alignment: 'center'
+        },
+        subheader: {
+          fontSize: 14,
+          margin: [0, 0, 0, 5]
+        },
+        sectionHeader: {
+          fontSize: 14,
+          bold: true,
+          margin: [0, 10, 0, 5],
+          decoration: 'underline'
+        },
+        fieldLabel: {
+          fontSize: 12,
+          bold: true,
+          margin: [0, 5, 0, 2]
+        },
+        fieldValue: {
+          fontSize: 12,
+          margin: [10, 0, 0, 5]
+        }
+      },
+      pageSize: 'A4',
+      pageMargins: [40, 60, 40, 60],
+      info: {
+        title: `Application for ${job.value?.title || 'Job'}`,
+        author: applicantName
+      }
+    };
 
-  //   if (result) {
-  //     console.log(result)
-  //     const blobUrl = URL.createObjectURL(result); // Directly use the blob
-      
-  //     // Preview handling
-  //     const iframe = document.getElementById('pdf-preview');
-  //     iframe.src = blobUrl;
-  //     iframe.classList.remove('hidden');
+    // 5. Generate and download the PDF
+    usePDFMake().createPdf(documentDefinition).download(filename);
 
-  //     // Download handling
-  //     const a = document.createElement('a');
-  //     a.href = blobUrl;
-  //     a.download = `application_${submission.id}.pdf`;
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     document.body.removeChild(a);
-
-  //     // Safer URL cleanup
-  //     iframe.onload = () => URL.revokeObjectURL(blobUrl);
-  //     setTimeout(() => URL.revokeObjectURL(blobUrl), 5000); // Fallback cleanup
-  //   }
-    
-  //   toast.add({ 
-  //     title: 'PDF Generated', 
-  //     color: 'green',
-  //     timeout: 3000
-  //   });
-    
-  // } catch (error) {
-  //   console.error('PDF generation error:', error);
-  //   toast.add({ 
-  //     title: 'PDF Generation Failed', 
-  //     description: 'Please try again or contact support',
-  //     color: 'red',
-  //     timeout: 5000
-  //   });
-  // } finally {
-  //   isGenerating.value = false;
-  // }
+    toast.add({
+      title: 'PDF Export Successful',
+      description: `Downloaded as ${filename}`,
+      color: 'green',
+      timeout: 5000
+    });
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    toast.add({
+      title: 'PDF Export Failed',
+      description: error.message || 'An unexpected error occurred.',
+      color: 'red',
+      timeout: 6000
+    });
+  } finally {
+    isGenerating.value = false;
+  }
 };
-
-// Helper function for color conversion
-function rgbToHex(rgbString) {
-  if (!rgbString.includes('rgb')) return '#000000';
-  
-  const rgb = rgbString.match(/\d+/g);
-  return `#${((1 << 24) + (Number(rgb[0]) << 16) + (Number(rgb[1]) << 8) + Number(rgb[2]))
-    .toString(16)
-    .slice(1)}`;
-}
-
 // Bulk Actions
 const handleBulkAction = async () => {
   if (selectedSubmissions.value.length === 0) {
@@ -695,6 +669,7 @@ const questionResponses = computed(() => {
                             icon="i-heroicons-document-arrow-down"
                             size="xs"
                             :loading="isGenerating"
+                            :disabled="isGenerating"
                             @click="exportSubmissionPDF(selectedSubmission)"
                           />
                         </div>
