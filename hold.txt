@@ -1,0 +1,947 @@
+<script setup>
+import { useFirestore } from 'vuefire'
+import { collection, query, getDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore'
+// import VueApexCharts from 'vue3-apexcharts'
+
+const db = useFirestore()
+const route = useRoute()
+const toast = useToast()
+
+// State
+const job = ref(null)
+const submissions = ref([])
+const loading = ref(false)
+const activeTab = ref('responses')
+const selectedSubmission = ref(null)
+const filters = ref({
+  status: 'all',
+  dateRange: null,
+  search: ''
+})
+
+const analytics = ref({
+  statusDistribution: {},
+  timelineData: [],
+  demographicData: {}
+})
+
+const statusOptions = ['new', 'reviewed', 'interviewed', 'hired', 'rejected']
+
+// Fetch job and submissions
+onMounted(async () => {
+  loading.value = true
+  try {
+    const jobDoc = await getDoc(doc(db, 'jobs', route.params.id))
+    job.value = { id: jobDoc.id, ...jobDoc.data() }
+    
+    const submissionsQuery = query(collection(db, 'jobs', route.params.id, 'submissions'))
+    const unsubscribe = onSnapshot(submissionsQuery, (snapshot) => {
+      submissions.value = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+      calculateAnalytics()
+      loading.value = false
+    })
+  } catch (error) {
+    toast.add({ title: 'Error', description: error.message, color: 'red' })
+    loading.value = false
+  }
+})
+
+// Analytics calculations
+const calculateAnalytics = () => {
+  const statusCounts = {}
+  const timeline = {}
+  
+  submissions.value.forEach(sub => {
+    // Status distribution
+    statusCounts[sub.status] = (statusCounts[sub.status] || 0) + 1
+    
+    // Timeline data
+    const date = new Date(sub.submittedAt?.seconds * 1000).toISOString().split('T')[0]
+    timeline[date] = (timeline[date] || 0) + 1
+  })
+  
+  analytics.value.statusDistribution = statusCounts
+  analytics.value.timelineData = Object.entries(timeline).map(([date, count]) => ({ date, count }))
+}
+
+// Filtered submissions
+const filteredSubmissions = computed(() => {
+  return submissions.value.filter(sub => {
+    const matchesStatus = filters.value.status === 'all' || sub.status === filters.value.status
+    const matchesSearch = JSON.stringify(sub.formData).toLowerCase().includes(filters.value.search.toLowerCase())
+    
+    // Date range filter
+    let matchesDate = true
+    if (filters.value.dateRange) {
+      const submissionDate = new Date(sub.submittedAt?.seconds * 1000)
+      const start = new Date(filters.value.dateRange.start)
+      const end = new Date(filters.value.dateRange.end)
+      matchesDate = submissionDate >= start && submissionDate <= end
+    }
+    
+    return matchesStatus && matchesSearch && matchesDate
+  })
+})
+
+// Update submission status
+const updateStatus = async (submissionId, newStatus) => {
+  try {
+    await updateDoc(doc(db, 'jobs', route.params.id, 'submissions', submissionId), {
+      status: newStatus
+    })
+    toast.add({ title: 'Status updated', color: 'green' })
+  } catch (error) {
+    toast.add({ title: 'Error updating status', description: error.message, color: 'red' })
+  }
+}
+
+// Chart options
+const pieChartOptions = computed(() => ({
+  labels: Object.keys(analytics.value.statusDistribution),
+  colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+  dataLabels: { enabled: false },
+  legend: { position: 'bottom' }
+}))
+
+const pieChartSeries = computed(() => 
+  Object.values(analytics.value.statusDistribution)
+)
+
+const lineChartOptions = ref({
+  chart: { type: 'line', height: 350 },
+  xaxis: { type: 'datetime' }
+})
+
+// Format form field value for display
+const formatFieldValue = (value) => {
+  if (Array.isArray(value)) return value.join(', ')
+  if (value === null || value === undefined) return 'Not provided'
+  return value.toString()
+};
+</script>
+
+<template>
+  <UContainer class="py-8">
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-2xl font-bold">{{ job?.title }} Applications</h1>
+        <p class="text-gray-500">{{ submissions.length }} total submissions</p>
+      </div>
+      <UButton
+        icon="i-heroicons-arrow-left"
+        label="Back to Dashboard"
+        to="/admin/dashboard"
+      />
+    </div>
+
+    <!-- Tabs Navigation -->
+    <UTabs v-model="activeTab" :items="[
+      { label: 'Responses', value: 'responses' },
+      { label: 'Analytics', value: 'analytics' }
+    ]" class="mb-6">
+      <template #default="{ item }">
+        <div class="flex items-center gap-2">
+          <!-- <UIcon :name="item.icon" class="w-4 h-4" /> -->
+          <span>{{ item.label }}</span>
+        </div>
+      </template>
+    </UTabs>
+
+    <!-- Responses Tab -->
+    <div v-if="activeTab === 'responses'">
+      <!-- Filters -->
+      <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <USelect
+            v-model="filters.status"
+            :items="[{ value: 'all', label: 'All Statuses' }, ...statusOptions.map(s => ({ value: s, label: s }))]"
+            placeholder="Filter by status"
+          />
+          <UInput
+            v-model="filters.search"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Search submissions..."
+          />
+          <UDatePicker 
+            v-model="filters.dateRange"
+            mode="range"
+            :columns="2"
+          />
+        </div>
+      </div>
+
+      <!-- Submission List and Detail View -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Submission List -->
+        <div class="space-y-2">
+          <UInput
+            v-model="filters.search"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Search responses..."
+            class="mb-4"
+          />
+
+          <div class="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+            <UCard
+              v-for="submission in filteredSubmissions"
+              :key="submission.id"
+              class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+              :class="{ 'ring-2 ring-primary-500': selectedSubmission?.id === submission.id }"
+              @click="selectedSubmission = submission"
+            >
+              <div class="flex items-center gap-3">
+                <UAvatar :src="submission.formData.avatar" size="sm" />
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium truncate">{{ submission.formData.fullName || 'Anonymous' }}</p>
+                  <p class="text-sm text-gray-500 truncate">
+                    {{ new Date(submission.submittedAt?.seconds * 1000).toLocaleString() }}
+                  </p>
+                </div>
+                <UBadge :label="submission.status" size="xs" />
+              </div>
+            </UCard>
+
+            <UPagination
+              v-if="filteredSubmissions.length > 10"
+              v-model="page"
+              :page-count="10"
+              :total="filteredSubmissions.length"
+              class="mt-4"
+            />
+          </div>
+        </div>
+
+        <!-- Submission Detail -->
+        <div class="lg:col-span-2" v-if="selectedSubmission">
+          <UCard>
+            <template #header>
+              <div class="flex justify-between items-center">
+                <h3 class="font-semibold">Response Details</h3>
+                <div class="flex gap-2">
+                  <USelect
+                    v-model="selectedSubmission.status"
+                    :items="statusOptions.map(s => ({ value: s, label: s }))"
+                    @update:model-value="updateStatus(selectedSubmission.id, $event)"
+                    size="xs"
+                  />
+                  <UButton
+                    icon="i-heroicons-document-arrow-down"
+                    color="gray"
+                    variant="ghost"
+                    size="xs"
+                    label="Export"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <div class="space-y-6">
+              <!-- Applicant Info -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div v-if="selectedSubmission.formData.fullName">
+                  <p class="text-sm text-gray-500">Name</p>
+                  <p class="font-medium">{{ selectedSubmission.formData.fullName }}</p>
+                </div>
+                <div v-if="selectedSubmission.formData.email">
+                  <p class="text-sm text-gray-500">Email</p>
+                  <p class="font-medium">{{ selectedSubmission.formData.email }}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Submitted</p>
+                  <p class="font-medium">
+                    {{ new Date(selectedSubmission.submittedAt?.seconds * 1000).toLocaleString() }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Status</p>
+                  <p class="font-medium">{{ selectedSubmission.status }}</p>
+                </div>
+              </div>
+
+              <!-- Form Responses -->
+              <div class="space-y-4">
+                <h4 class="font-medium border-b pb-2">Form Responses</h4>
+                
+                <div 
+                  v-for="(value, key) in selectedSubmission.formData" 
+                  :key="key"
+                  v-if="!['fullName', 'email', 'avatar'].includes(key)"
+                  class="space-y-1"
+                >
+                  <p class="text-sm text-gray-500 capitalize">{{ key.replace(/_/g, ' ') }}</p>
+                  <p class="font-medium">{{ formatFieldValue(value) }}</p>
+                </div>
+              </div>
+            </div>
+          </UCard>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="lg:col-span-2 flex items-center justify-center h-64">
+          <div class="text-center">
+            <UIcon name="i-heroicons-document-magnifying-glass" class="w-12 h-12 mx-auto text-gray-400" />
+            <p class="mt-2 text-gray-500">Select a response to view details</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Tab -->
+    <div v-if="activeTab === 'analytics'">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <UCard>
+          <template #header>
+            <h3 class="font-semibold">Status Distribution</h3>
+          </template>
+          <!-- <ClientOnly>
+            <VueApexCharts
+              type="donut"
+              height="300"
+              :options="pieChartOptions"
+              :series="pieChartSeries"
+            />
+          </ClientOnly> -->
+        </UCard>
+
+        <UCard>
+          <template #header>
+            <h3 class="font-semibold">Submission Timeline</h3>
+          </template>
+          <!-- <ClientOnly>
+            <VueApexCharts
+              type="line"
+              height="300"
+              :options="lineChartOptions"
+              :series="[{ data: analytics.timelineData }]"
+            />
+          </ClientOnly> -->
+        </UCard>
+      </div>
+
+      <UCard>
+        <template #header>
+          <h3 class="font-semibold">Quick Actions</h3>
+        </template>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <UButton 
+            block 
+            label="Export All to CSV" 
+            icon="i-heroicons-document-arrow-down"
+            @click="exportCSV"
+          />
+          <UButton 
+            block 
+            label="AI Analysis" 
+            icon="i-heroicons-sparkles"
+            @click="analyzeApplications"
+          />
+          <UButton 
+            block 
+            label="View Form Structure" 
+            icon="i-heroicons-document-text"
+            @click="activeTab = 'responses'"
+          />
+        </div>
+      </UCard>
+    </div>
+  </UContainer>
+</template>
+
+
+
+<script setup>
+import { useFirestore } from 'vuefire'
+import { collection, query, getDoc, doc, updateDoc, onSnapshot, orderBy } from 'firebase/firestore'
+
+import { saveAs } from 'file-saver'; // For CSV export
+
+const db = useFirestore()
+const route = useRoute()
+const toast = useToast()
+const { VUE_APP_GEMINI_API_KEY } = import.meta.env;
+
+let VueApexCharts = null
+
+onMounted(async () => {
+  const module = await import('vue3-apexcharts')
+  VueApexCharts = module.default
+})
+
+// State
+const job = ref(null) // Will hold job details including formSchema
+const submissions = ref([])
+const loading = ref(true) // Changed initial state to true
+const error = ref(null)
+const filters = ref({
+  status: 'all',
+  dateRange: null,
+  search: ''
+})
+const analytics = ref({
+  statusDistribution: {},
+  timelineData: [],
+  // Add other analytics if needed
+})
+const statusOptions = ['new', 'viewed', 'shortlisted', 'interviewing', 'hired', 'rejected'] // Example statuses
+const selectedSubmissions = ref([]) // Array of submission IDs for bulk actions
+const activeTab = ref(0) // 0 for Summary, 1 for Responses
+
+// --- Chart Options (Slight adjustments for clarity) ---
+const statusChartOptions = computed(() => ({
+  chart: { type: 'donut', height: 300 },
+  labels: Object.keys(analytics.value.statusDistribution),
+  colors: ['#60A5FA', '#34D399', '#FBBF24', '#F87171', '#A78BFA', '#9CA3AF'], // Adjusted colors
+  dataLabels: { enabled: true, formatter: (val, opts) => opts.w.globals.labels[opts.seriesIndex] + ": " + val.toFixed(1) + '%' }, // Show percentage
+  legend: { position: 'bottom' },
+  tooltip: { y: { formatter: (val) => `${val} submissions` } },
+  plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0) } } } } }
+}))
+
+const statusChartSeries = computed(() => Object.values(analytics.value.statusDistribution))
+
+const timelineChartOptions = computed(() => ({
+    chart: { id: 'submission-timeline', type: 'area', height: 300, toolbar: { show: false } },
+    xaxis: {
+        type: 'datetime',
+        labels: { datetimeUTC: false, format: 'dd MMM yy' } // Use local time, format date
+    },
+    yaxis: { title: { text: 'Submissions' } },
+    tooltip: { x: { format: 'dd MMM yyyy' } }, // Tooltip format
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth' },
+    fill: {
+      type: "gradient",
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.7,
+        opacityTo: 0.9,
+        stops: [0, 90, 100]
+      }
+    },
+}))
+
+const timelineChartSeries = computed(() => [{
+    name: 'Submissions',
+    // Ensure data is sorted by date for the line chart
+    data: analytics.value.timelineData.sort((a, b) => new Date(a.x) - new Date(b.x))
+}])
+// --- End Chart Options ---
+
+// Helper to get form field label
+const getFieldLabel = (fieldId) => {
+  return job.value?.formSchema?.fields?.find(f => f.id === fieldId)?.label || fieldId;
+}
+
+// Helper to format data for display
+const formatDisplayValue = (value) => {
+  if (value === null || value === undefined) return 'N/A';
+  if (typeof value === 'object' && value.toDate) { // Firestore Timestamp
+    return value.toDate().toLocaleString();
+  }
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  if (typeof value === 'object') {
+     // Basic object display, might need refinement for specific objects like file uploads
+     return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+// Fetch job and submissions
+onMounted(async () => {
+  loading.value = true
+  error.value = null; // Reset error on mount
+  try {
+    const jobId = route.params.id;
+    if (!jobId) throw new Error("Job ID is missing from route.");
+
+    const jobDocRef = doc(db, 'jobs', jobId);
+    const jobDoc = await getDoc(jobDocRef);
+
+    if (!jobDoc.exists()) {
+        throw new Error(`Job with ID ${jobId} not found.`);
+    }
+    // IMPORTANT: Ensure formSchema is fetched with the job
+    job.value = { id: jobDoc.id, ...jobDoc.data() };
+    if (!job.value.formSchema || !job.value.formSchema.fields) {
+        console.warn("Job data is missing formSchema or formSchema.fields. Dynamic display might be limited.");
+        // Provide a default empty schema if needed, or handle this case gracefully
+        if (!job.value.formSchema) job.value.formSchema = { fields: [] };
+        else if (!job.value.formSchema.fields) job.value.formSchema.fields = [];
+    }
+
+    const submissionsQuery = query(
+        collection(db, 'jobs', jobId, 'submissions'),
+        orderBy('submittedAt', 'desc') // Order by newest first
+    );
+
+    const unsubscribe = onSnapshot(submissionsQuery, (snapshot) => {
+      submissions.value = snapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          // Ensure submittedAt is a Date object for easier handling
+          submittedAtDate: d.data().submittedAt?.toDate ? d.data().submittedAt.toDate() : null
+      }));
+      calculateAnalytics();
+      loading.value = false; // Set loading to false after first data load
+    }, (err) => {
+        console.error("Error fetching submissions:", err);
+        error.value = `Failed to load submissions: ${err.message}`;
+        toast.add({ title: 'Error Loading Submissions', description: err.message, color: 'red' })
+        loading.value = false;
+    });
+
+    // Clean up listener on unmount
+    // onUnmounted(() => {unsubscribe});
+
+  } catch (err) {
+    console.error("Error fetching job details:", err);
+    error.value = `Failed to load job details: ${err.message}`;
+    toast.add({ title: 'Error', description: error.value, color: 'red' })
+    loading.value = false
+  }
+})
+
+// Analytics calculations
+const calculateAnalytics = () => {
+  const statusCounts = statusOptions.reduce((acc, status) => { acc[status] = 0; return acc; }, {}); // Initialize all statuses
+  const timelineMap = {}
+
+  submissions.value.forEach(sub => {
+    // Status distribution (handle potentially undefined status)
+    const currentStatus = sub.status || 'new'; // Default to 'new' if status is missing
+    if (statusCounts.hasOwnProperty(currentStatus)) {
+        statusCounts[currentStatus]++;
+    } else {
+        // Handle unexpected status values if necessary
+        statusCounts[currentStatus] = (statusCounts[currentStatus] || 0) + 1;
+    }
+
+    // Timeline data (handle potentially undefined date)
+    if (sub.submittedAtDate) {
+        const dateStr = sub.submittedAtDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        timelineMap[dateStr] = (timelineMap[dateStr] || 0) + 1;
+    }
+  })
+
+  analytics.value.statusDistribution = statusCounts;
+  // Format for ApexCharts: [{ x: date, y: count }]
+  analytics.value.timelineData = Object.entries(timelineMap).map(([date, count]) => ({
+      x: new Date(date).getTime(), // Use timestamp for x-axis
+      y: count
+  }));
+}
+
+// Filtered submissions
+const filteredSubmissions = computed(() => {
+    if (!submissions.value) return [];
+    return submissions.value.filter(sub => {
+        // Status Filter
+        const matchesStatus = filters.value.status === 'all' || sub.status === filters.value.status;
+
+        // Search Filter (Search in stringified formData for simplicity)
+        let matchesSearch = true;
+        if (filters.value.search) {
+            try {
+                matchesSearch = JSON.stringify(sub.formData ?? {}).toLowerCase().includes(filters.value.search.toLowerCase());
+            } catch (e) {
+                matchesSearch = false; // Handle potential stringify errors
+            }
+        }
+
+        // Date Range Filter
+        let matchesDate = true;
+        if (filters.value.dateRange && filters.value.dateRange.start && filters.value.dateRange.end && sub.submittedAtDate) {
+            const subDate = sub.submittedAtDate.getTime();
+            // Ensure start and end are properly interpreted as dates
+            const startDate = new Date(filters.value.dateRange.start).setHours(0, 0, 0, 0); // Start of day
+            const endDate = new Date(filters.value.dateRange.end).setHours(23, 59, 59, 999); // End of day
+            matchesDate = subDate >= startDate && subDate <= endDate;
+        } else if (filters.value.dateRange && filters.value.dateRange.start && !filters.value.dateRange.end && sub.submittedAtDate) {
+             // Handle single date selection if date picker allows it
+             const subDateOnly = sub.submittedAtDate.setHours(0,0,0,0);
+             const filterDateOnly = new Date(filters.value.dateRange.start).setHours(0,0,0,0);
+             matchesDate = subDateOnly === filterDateOnly;
+        }
+
+        return matchesStatus && matchesSearch && matchesDate;
+    });
+});
+
+// Update submission status (Individual)
+const updateStatus = async (submissionId, newStatus) => {
+  if (!submissionId || !newStatus) return;
+  try {
+    await updateDoc(doc(db, 'jobs', route.params.id, 'submissions', submissionId), {
+      status: newStatus
+    })
+    toast.add({ title: 'Status updated', color: 'green', timeout: 2000 })
+    // Analytics might need recalculation if status changes affect charts significantly
+    // calculateAnalytics(); // Optionally recalculate, or let onSnapshot handle it
+  } catch (error) {
+    toast.add({ title: 'Error updating status', description: error.message, color: 'red' })
+  }
+}
+
+// CSV Export (Dynamically generates headers from formSchema)
+const exportCSV = () => {
+    if (!job.value?.formSchema?.fields || filteredSubmissions.value.length === 0) {
+        toast.add({ title: 'Cannot Export', description: 'No form schema found or no submissions to export.', color: 'orange' });
+        return;
+    }
+
+    // Dynamic Headers from formSchema fields + standard fields
+    const formHeaders = job.value.formSchema.fields.map(field => field.label || field.id);
+    const standardHeaders = ['Submission ID', 'Status', 'Submitted At'];
+    const allHeaders = [...standardHeaders, ...formHeaders];
+
+    // Prepare rows
+    const rows = filteredSubmissions.value.map(sub => {
+        const standardValues = [
+            sub.id,
+            sub.status || 'N/A',
+            sub.submittedAtDate ? sub.submittedAtDate.toLocaleString() : 'N/A'
+        ];
+        const formValues = job.value.formSchema.fields.map(field => {
+            const value = sub.formData ? sub.formData[field.id] : undefined;
+            // Format values for CSV (handle commas, quotes, newlines)
+            let formattedValue = formatDisplayValue(value).replace(/"/g, '""');
+            if (formattedValue.includes(',') || formattedValue.includes('\n')) {
+                formattedValue = `"${formattedValue}"`;
+            }
+            return formattedValue;
+        });
+        return [...standardValues, ...formValues];
+    });
+
+    // Create CSV content
+    const csvContent = [
+        allHeaders.join(','), // Header row
+        ...rows.map(row => row.join(',')) // Data rows
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const jobTitleSanitized = job.value.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    saveAs(blob, `applications_${jobTitleSanitized}_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+
+// --- Bulk Actions ---
+const bulkActionStatus = ref(statusOptions[0]); // Default status for bulk change
+
+const handleBulkAction = async () => {
+    if (selectedSubmissions.value.length === 0) {
+        toast.add({ title: 'No submissions selected', color: 'orange', timeout: 3000 });
+        return;
+    }
+
+    // Example: Bulk Status Change
+    if (bulkActionStatus.value) {
+        const newStatus = bulkActionStatus.value;
+        const updates = selectedSubmissions.value.map(submissionId => {
+            const submissionRef = doc(db, 'jobs', route.params.id, 'submissions', submissionId);
+            return updateDoc(submissionRef, { status: newStatus });
+        });
+
+        try {
+            await Promise.all(updates);
+            toast.add({ title: `Updated ${selectedSubmissions.value.length} submissions to '${newStatus}'`, color: 'green' });
+            selectedSubmissions.value = []; // Clear selection after action
+        } catch (error) {
+            console.error("Bulk update error:", error);
+            toast.add({ title: 'Bulk update failed', description: error.message, color: 'red' });
+        }
+    }
+    // Add logic for other bulk actions (tagging, export selected) here
+}
+// --- End Bulk Actions ---
+
+// AI Analysis Placeholder (requires backend implementation)
+const aiAnalysisResult = ref(null);
+const analyzing = ref(false);
+const analyzeApplications = async () => {
+    if (filteredSubmissions.value.length === 0) {
+        toast.add({ title: 'No submissions to analyze', color: 'orange' });
+        return;
+    }
+    analyzing.value = true;
+    aiAnalysisResult.value = null; // Clear previous results
+    try {
+        // **IMPORTANT**: This needs a backend API endpoint (`/api/ai-analysis`)
+        // that securely handles the AI interaction (e.g., using Gemini API).
+        // Sending potentially large amounts of PII directly from the client
+        // to an AI is generally not recommended without a backend proxy.
+        // The backend should sanitize/summarize data before sending to the AI if needed.
+
+        // Prepare data for the backend (potentially summarize or select key fields)
+        const submissionsForAI = filteredSubmissions.value.map(sub => ({
+            id: sub.id,
+            // Select relevant fields, avoid sending everything if possible
+            data: sub.formData, // Send relevant formData
+            status: sub.status
+        }));
+
+        // Replace with your actual API call
+        const { data, error: fetchError } = await useFetch('/api/ai-analysis', {
+            method: 'POST',
+            body: {
+                jobTitle: job.value?.title,
+                jobDescription: job.value?.description, // Provide job context
+                submissions: submissionsForAI,
+                // You could add specific questions/prompts here
+            },
+             headers: {
+                // Add Authorization header if needed
+                // 'Authorization': `Bearer ${YOUR_API_KEY_OR_TOKEN}`
+            }
+        });
+
+        if (fetchError.value) throw fetchError.value;
+        if (!data.value?.summary) throw new Error("AI analysis did not return a summary.");
+
+        aiAnalysisResult.value = data.value.summary; // Store the analysis result
+        toast.add({ title: 'AI Analysis Complete', color: 'green' });
+        activeTab.value = 0; // Switch back to summary tab to show results potentially
+
+    } catch (error) {
+        console.error("AI Analysis error:", error);
+        toast.add({ title: 'AI Analysis Failed', description: error.message, color: 'red' });
+        aiAnalysisResult.value = "Analysis failed. Please check the console or try again later.";
+    } finally {
+        analyzing.value = false;
+    }
+};
+</script>
+
+<template>
+  <UContainer class="py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div>
+        <h1 v-if="job" class="text-2xl font-bold text-gray-900 dark:text-white">{{ job.title }} - Applications</h1>
+        <p v-else class="text-2xl font-bold text-gray-900 dark:text-white">Loading Job Applications...</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Manage and analyze submissions for this position. {{ submissions.length }} total submission(s).
+        </p>
+      </div>
+       <UButton
+            label="Back to Dashboard"
+            icon="i-heroicons-arrow-left-circle"
+            color="gray"
+            variant="ghost"
+            to="/admin/dashboard"
+            class="flex-shrink-0"
+        />
+    </div>
+
+    <div v-if="loading && submissions.length === 0" class="text-center py-16">
+        <UIcon name="i-heroicons-arrow-path" class="w-12 h-12 mx-auto animate-spin text-primary-500" />
+        <p class="mt-4 text-lg font-medium text-gray-600 dark:text-gray-300">Loading submissions...</p>
+    </div>
+
+    <UAlert
+        v-else-if="error"
+        icon="i-heroicons-exclamation-triangle"
+        color="red"
+        variant="solid"
+        :title="'Failed to Load Data'"
+        :description="error"
+        class="mb-6"
+    />
+
+    <div v-else>
+        <UTabs v-model="activeTab" :items="[{ label: 'Summary' }, { label: 'Responses' }]">
+            <template #content="{ item }">
+                <div v-if="item.label === 'Summary'" class="py-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                         <UCard>
+                            <template #header><h3 class="font-semibold">Status Distribution</h3></template>
+                            <ClientOnly placeholder-tag="div" fallback-tag="div" class="h-[300px] flex items-center justify-center">
+                                <template #fallback>
+                                    <UIcon name="i-heroicons-chart-pie" class="w-16 h-16 text-gray-300 animate-pulse"/>
+                                </template>
+                                <VueApexCharts v-if="statusChartSeries.length" type="donut" height="300" :options="statusChartOptions" :series="statusChartSeries" />
+                                <p v-else class="text-gray-500">No status data available.</p>
+                            </ClientOnly>
+                        </UCard>
+
+                         <UCard>
+                            <template #header><h3 class="font-semibold">Submission Timeline</h3></template>
+                             <ClientOnly placeholder-tag="div" fallback-tag="div" class="h-[300px] flex items-center justify-center">
+                                 <template #fallback>
+                                    <UIcon name="i-heroicons-chart-bar" class="w-16 h-16 text-gray-300 animate-pulse"/>
+                                </template>
+                                <VueApexCharts v-if="timelineChartSeries[0]?.data?.length" type="area" height="300" :options="timelineChartOptions" :series="timelineChartSeries" />
+                                <p v-else class="text-gray-500">No timeline data available.</p>
+                             </ClientOnly>
+                        </UCard>
+
+                        <UCard>
+                            <template #header><h3 class="font-semibold">Actions & Insights</h3></template>
+                            <div class="space-y-3">
+                                <UButton
+                                    block
+                                    label="Export Filtered to CSV"
+                                    icon="i-heroicons-document-arrow-down"
+                                    @click="exportCSV"
+                                    color="blue"
+                                    variant="outline"
+                                    :disabled="filteredSubmissions.length === 0"
+                                />
+                                <UButton
+                                    block
+                                    label="Analyze with AI"
+                                    icon="i-heroicons-sparkles"
+                                    @click="analyzeApplications"
+                                    color="primary"
+                                    :loading="analyzing"
+                                    :disabled="filteredSubmissions.length === 0 || analyzing"
+                                />
+                                <UAlert
+                                    v-if="aiAnalysisResult && !analyzing"
+                                    icon="i-heroicons-chat-bubble-left-right"
+                                    color="primary"
+                                    variant="subtle"
+                                    title="AI Analysis Summary"
+                                    :description="aiAnalysisResult"
+                                    class="mt-4 max-h-60 overflow-y-auto"
+                                />
+                                 <UProgress v-if="analyzing" animation="carousel" />
+                            </div>
+                        </UCard>
+                    </div>
+                </div>
+
+                <div v-if="item.label === 'Responses'" class="py-6">
+                     <div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
+                         <h3 class="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">Filter Submissions</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                           <UFormField label="Status" size="sm">
+                                <USelectMenu
+                                    v-model="filters.status"
+                                    :items="[{ value: 'all', label: 'All Statuses' }, ...statusOptions.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))]"
+                                    placeholder="Filter by status"
+                                    value-attribute="value"
+                                    option-attribute="label"
+                                    size="sm"
+                                />
+                            </UFormField>
+                            <UFormField label="Search" size="sm">
+                                <UInput
+                                    v-model.lazy.trim="filters.search"
+                                    icon="i-heroicons-magnifying-glass"
+                                    placeholder="Search all fields..."
+                                    size="sm"
+                                />
+                            </UFormField>
+                            <UFormField label="Date Range" size="sm">
+                                <UPopover :popper="{ placement: 'bottom-start' }">
+                                    <UButton icon="i-heroicons-calendar-days-20-solid"
+                                        :label="filters.dateRange ? `${new Date(filters.dateRange.start).toLocaleDateString()} - ${new Date(filters.dateRange.end).toLocaleDateString()}` : 'Select date range'"
+                                        color="gray"
+                                        variant="outline"
+                                        size="sm"
+                                    />
+                                    <template #panel="{ close }">
+                                       <UCalendar v-model="filters.dateRange" is-range @close="close"/>
+                                    </template>
+                                </UPopover>
+                            </UFormField>
+                             <UButton
+                                label="Clear Filters"
+                                icon="i-heroicons-x-circle"
+                                color="gray"
+                                variant="link"
+                                size="sm"
+                                @click="filters = { status: 'all', dateRange: null, search: '' }"
+                                class="justify-self-start lg:justify-self-end"
+                            />
+                        </div>
+                    </div>
+
+                    <div v-if="selectedSubmissions.length > 0" class="bg-primary-50 dark:bg-primary-900/20 p-3 rounded-lg mb-6 border border-primary-200 dark:border-primary-700 flex flex-wrap items-center gap-4">
+                        <p class="text-sm font-medium text-primary-700 dark:text-primary-200 flex-shrink-0">
+                            {{ selectedSubmissions.length }} submission(s) selected
+                        </p>
+                        <div class="flex items-center gap-2 flex-grow">
+                             <USelectMenu
+                                v-model="bulkActionStatus"
+                                :items="statusOptions.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))"
+                                placeholder="Change status to..."
+                                value-attribute="value"
+                                option-attribute="label"
+                                size="sm"
+                            />
+                            <UButton
+                                label="Apply Status"
+                                size="sm"
+                                @click="handleBulkAction"
+                                icon="i-heroicons-check-circle"
+                            />
+                        </div>
+                         <UButton
+                            label="Clear Selection"
+                            size="sm"
+                            color="gray"
+                            variant="link"
+                            icon="i-heroicons-x-mark"
+                            @click="selectedSubmissions = []"
+                        />
+                        </div>
+
+                    <div v-if="filteredSubmissions.length > 0" class="space-y-4">
+                        <UCard v-for="submission in filteredSubmissions" :key="submission.id" :ui="{ body: { padding: 'px-4 py-4 sm:p-5' } }">
+                           <div class="flex flex-col sm:flex-row gap-4">
+                                <div class="flex-shrink-0 pt-1">
+                                    <UCheckbox v-model="selectedSubmissions" :value="submission.id" />
+                                </div>
+
+                                <div class="flex-grow space-y-3">
+                                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                        <NuxtLink :to="`/admin/jobs/${route.params.id}/applications/${submission.id}`" class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 group">
+                                            Submitted: {{ submission.submittedAtDate ? submission.submittedAtDate.toLocaleString() : 'N/A' }}
+                                            <UIcon name="i-heroicons-arrow-top-right-on-square-20-solid" class="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                                        </NuxtLink>
+                                        <USelectMenu
+                                            :model-value="submission.status"
+                                            :items="statusOptions.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))"
+                                            @update:model-value="(newStatus) => updateStatus(submission.id, newStatus)"
+                                            size="xs"
+                                            value-attribute="value"
+                                            option-attribute="label"
+                                            :ui-menu="{ width: 'w-36' }"
+                                        />
+                                    </div>
+                                    <hr class="dark:border-gray-700"/>
+                                     <dl class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+                                        <template v-for="field in job?.formSchema?.fields" :key="field.id">
+                                            <div v-if="submission.formData && submission.formData.hasOwnProperty(field.id)" class="break-words">
+                                                <dt class="font-medium text-gray-800 dark:text-gray-200">{{ field.label || field.id }}</dt>
+                                                <dd class="text-gray-600 dark:text-gray-300 mt-0.5">{{ formatDisplayValue(submission.formData[field.id]) }}</dd>
+                                            </div>
+                                        </template>
+                                     </dl>
+                                </div>
+                            </div>
+                        </UCard>
+                    </div>
+                    <div v-else-if="submissions.length > 0 && filteredSubmissions.length === 0" class="text-center py-12">
+                        <UIcon name="i-heroicons-document-magnifying-glass" class="w-12 h-12 mx-auto text-gray-400" />
+                        <p class="mt-4 font-semibold text-gray-700 dark:text-gray-200">No submissions match your filters.</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
+                    </div>
+                    <div v-else class="text-center py-12">
+                        <UIcon name="i-heroicons-inbox-arrow-down" class="w-12 h-12 mx-auto text-gray-400" />
+                        <p class="mt-4 font-semibold text-gray-700 dark:text-gray-200">No applications submitted yet.</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Submissions for this job will appear here.</p>
+                    </div>
+                </div>
+            </template>
+        </UTabs>
+    </div>
+  </UContainer>
+</template>
+
+<style scoped>
+/* Add any specific styles if needed */
+</style>
