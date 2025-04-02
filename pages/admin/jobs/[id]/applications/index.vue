@@ -466,12 +466,12 @@ const analyzeApplications = async () => {
     toast.add({ title: 'No submissions to analyze', color: 'orange' })
     return
   }
-  
+
   analyzing.value = true
   aiAnalysisResult.value = null
-  
+
   try {
-    // This would call your actual API endpoint
+    // This would call your actual API endpoint (no changes needed here)
     const { data } = await useFetch('/api/ai-analysis', {
       method: 'POST',
       body: {
@@ -811,7 +811,7 @@ const questionResponses = computed(() => {
                   @click="activeTab = '0'"
                 />
               </div>
-              <UAlert
+              <!-- <UAlert
                 v-if="aiAnalysisResult"
                 icon="i-heroicons-chat-bubble-left-right"
                 color="primary"
@@ -819,11 +819,135 @@ const questionResponses = computed(() => {
                 title="AI Analysis Summary"
                 :description="aiAnalysisResult"
                 class="mt-4"
-              />
+              /> -->
             </UCard>
+            
+            <UContainer class="py-8">
+              <UCard v-if="aiAnalysisResult" class="relative overflow-hidden">
+                <!-- Decorative elements -->
+                <div class="absolute top-0 right-0 w-32 h-32 opacity-10">
+                  <UIcon name="i-heroicons-sparkles" class="w-full h-full text-primary-500" />
+                </div>
+                
+                <!-- Header -->
+                <div class="flex items-center gap-3 mb-4">
+                  <UIcon name="i-heroicons-chat-bubble-left-right" class="w-6 h-6 text-primary-500" />
+                  <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    AI Analysis Summary
+                  </h2>
+                </div>
+                
+                <!-- Content with subtle animation -->
+                <div class="relative">
+                  <div class="prose prose-sm dark:prose-invert max-w-none" v-if="aiAnalysisResult">
+                    <MDC :value="aiAnalysisResult" class="ai-summary transition-all duration-300" />
+                  </div>
+                  
+                  <!-- Watermark -->
+                  <div class="absolute -bottom-2 -right-2 text-xs text-gray-400 dark:text-gray-600">
+                    AI Generated Content
+                  </div>
+                </div>
+                
+                <!-- Fade effect at bottom -->
+                <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-900"></div>
+              </UCard>
+            </UContainer>
           </div>
         </template>
       </UTabs>
     </div>
   </UContainer>
 </template>
+
+<style>
+.ai-summary {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.7;
+  color: var(--color-gray-800);
+}
+
+.ai-summary h2, 
+.ai-summary h3 {
+  font-weight: 600;
+  margin: 1.5em 0 0.75em 0;
+  color: var(--color-gray-900);
+}
+
+.ai-summary h2 {
+  font-size: 1.25rem;
+  border-bottom: 1px solid var(--color-gray-200);
+  padding-bottom: 0.5rem;
+}
+
+.ai-summary h3 {
+  font-size: 1.1rem;
+}
+
+.ai-summary p {
+  margin: 1em 0;
+  font-size: 0.95rem;
+}
+
+.ai-summary ul, 
+.ai-summary ol {
+  margin: 1em 0;
+  padding-left: 1.5em;
+}
+
+.ai-summary li {
+  margin: 0.5em 0;
+  padding-left: 0.5em;
+}
+
+.ai-summary strong {
+  color: var(--color-gray-900);
+  font-weight: 600;
+}
+
+.ai-summary a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ai-summary code {
+  background: var(--color-gray-100);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: 'Menlo', monospace;
+}
+
+.ai-summary pre {
+  background: var(--color-gray-100);
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.25em 0;
+}
+
+/* Dark mode adjustments */
+.dark .ai-summary {
+  color: var(--color-gray-200);
+}
+
+.dark .ai-summary h2, 
+.dark .ai-summary h3 {
+  color: var(--color-gray-100);
+}
+
+.dark .ai-summary h2 {
+  border-color: var(--color-gray-700);
+}
+
+.dark .ai-summary strong {
+  color: var(--color-gray-100);
+}
+
+.dark .ai-summary code,
+.dark .ai-summary pre {
+  background: var(--color-gray-800);
+  color: var(--color-gray-100);
+}
+</style>
