@@ -23,7 +23,6 @@ const benefitInput = ref('')
 const error = ref('')
 const isLoading = ref(false)
 
-// Fetch existing job
 if (route.params.id !== 'new') {
   getDoc(doc(db, 'jobs', route.params.id))
     .then((snapshot) => {
@@ -59,10 +58,17 @@ async function handleSave() {
   }
 }
 
-function addItem(arrayRef, inputRef) {
-  if (inputRef.value.trim()) {
-    arrayRef.value = [...arrayRef.value, inputRef.value.trim()]
-    inputRef.value = ''
+function addRequirement() {
+  if (requirementInput.value.trim()) {
+    job.value.requirements = [...(job.value.requirements || []), requirementInput.value.trim()]
+    requirementInput.value = ''
+  }
+}
+
+function addBenefit() {
+  if (benefitInput.value.trim()) {
+    job.value.benefits = [...(job.value.benefits || []), benefitInput.value.trim()]
+    benefitInput.value = ''
   }
 }
 
@@ -141,7 +147,7 @@ function removeItem(array, index) {
           <UFormField label="Job Type" required>
             <USelect
               v-model="job.type"
-              :items="['Full-time', 'Part-time', 'Contract', 'Intern']"
+              :items="['Full-time', 'Part-time (Hybrid)', 'Remote', 'Contract', 'Intern']"
               icon="i-heroicons-clock"
               size="lg"
               class="w-full"
@@ -177,11 +183,11 @@ function removeItem(array, index) {
             <UInput class="w-full" 
               v-model="requirementInput" 
               placeholder="Add requirement (press Enter to add)"
-              @keyup.enter="addItem(job.requirements, requirementInput)"
+              @keyup.enter="addRequirement()"
               size="lg"
             />
             <UButton
-              @click="addItem(job.requirements, requirementInput)"
+              @click="addRequirement()"
               icon="i-heroicons-plus"
               color="primary"
             />
@@ -215,11 +221,11 @@ function removeItem(array, index) {
             <UInput class="w-full" 
               v-model="benefitInput" 
               placeholder="Add benefit (press Enter to add)"
-              @keyup.enter="addItem(job.benefits, benefitInput)"
+              @keyup.enter="addBenefit()"
               size="lg"
             />
             <UButton
-              @click="addItem(job.benefits, benefitInput)"
+              @click="addBenefit()"
               icon="i-heroicons-plus"
               color="primary"
             />
@@ -285,3 +291,7 @@ function removeItem(array, index) {
     </UCard>
   </UContainer>
 </template>
+
+<style>
+
+</style>

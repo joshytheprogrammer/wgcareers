@@ -170,7 +170,7 @@ function confirmDelete(job) {
                   :to="`/admin/jobs/${job.id}/applications`"
                   icon="i-heroicons-document-text"
                   color="primary"
-                  :label="submissionsCount[job.id] || '0'"
+                  :label="`${submissionsCount[job.id]}` || '0'"
                 />
             </UTooltip>
             <UButton
