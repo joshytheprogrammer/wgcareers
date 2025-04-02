@@ -148,7 +148,7 @@ function removeItem(array, index) {
             />
           </UFormField>
 
-          <UFormField label="Salary Range">
+          <UFormField label="Salary Range (₦)">
             <UInput class="w-full" 
               v-model="job.salary" 
               placeholder="e.g. ₦500,000 - ₦800,000"

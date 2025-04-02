@@ -126,8 +126,8 @@ const loadSchema = async () => {
       
       // Merge job data with form schema
       formSchema.value = {
-        title: data.formSchema?.title || data.title + 'Application Form',
-        description: data.formSchema?.description || `We're looking for talented candidates to fill this position. Please complete the application form to be considered for the ${data.title || 'role'}.`,
+        title: data.formSchema?.title || data.title + ' Application Form',
+        description: data.formSchema?.description || `We're looking for talented candidates to fill this position. Please complete the application form to be considered for the ${data.title || 'role'} role.`,
         formStatus: data.formSchema?.formStatus || 'draft',
         fields: data.formSchema?.fields || [],
         conditions: data.formSchema?.conditions || []
