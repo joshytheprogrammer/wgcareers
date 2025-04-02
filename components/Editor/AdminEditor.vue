@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div id="admin-editor">
     <!-- Link Dialog -->
     <Transition name="fade">
       <div v-if="showLinkDialog" class="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -265,3 +265,16 @@ onBeforeUnmount(() => {
 });
 </script>
 
+<style>
+#admin-editor ol {
+  list-style: decimal;
+  padding-left: 24px;
+  margin: 8px 0;
+} 
+
+#admin-editor ul {
+  list-style: disc;
+  padding-left: 24px;
+  margin: 8px 0;
+}
+</style>

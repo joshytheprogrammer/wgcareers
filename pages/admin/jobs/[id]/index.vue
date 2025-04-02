@@ -292,6 +292,6 @@ function removeItem(array, index) {
   </UContainer>
 </template>
 
-<style>
+<style scoped>
 
 </style>
