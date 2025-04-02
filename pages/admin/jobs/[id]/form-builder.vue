@@ -85,9 +85,15 @@ const formKitSchema = computed(() => {
       $formkit: field.type,
       name: field.id,
       label: field.label,
-      placeholder: field.placeholder,
       validation: validationRules.join('|') || undefined,
     };
+
+    // Add help or placeholder based on type
+    if (['checkbox', 'radio', 'select'].includes(field.type)) {
+      baseField.help = field.placeholder;
+    } else {
+      baseField.placeholder = field.placeholder;
+    }
 
     // Type-specific handling
     switch(field.type) {
@@ -483,7 +489,11 @@ onMounted(loadSchema);
                   <UInput class="w-full" v-model="field.label" />
                 </UFormField>
 
-                <UFormField label="Placeholder Text">
+                <!-- <UFormField label="Placeholder Text">
+                  <UInput class="w-full" v-model="field.placeholder" />
+                </UFormField> -->
+
+                <UFormField :label="['checkbox', 'radio', 'select'].includes(field.type) ? 'Help Text' : 'Placeholder Text'">
                   <UInput class="w-full" v-model="field.placeholder" />
                 </UFormField>
 
