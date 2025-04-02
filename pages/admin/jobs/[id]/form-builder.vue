@@ -455,7 +455,8 @@ onMounted(loadSchema);
 
       <!-- Deepseek Main Editor -->
       <div class="lg:col-span-2 space-y-4">
-        <UCard>
+        <!-- min-h-[400px] max-h-[700px] overflow-y-auto -->
+        <UCard class="">
           <template #header>
             <h2 class="font-semibold">Form Editor</h2>
           </template>
@@ -488,10 +489,6 @@ onMounted(loadSchema);
                 <UFormField label="Field Label">
                   <UInput class="w-full" v-model="field.label" />
                 </UFormField>
-
-                <!-- <UFormField label="Placeholder Text">
-                  <UInput class="w-full" v-model="field.placeholder" />
-                </UFormField> -->
 
                 <UFormField :label="['checkbox', 'radio', 'select'].includes(field.type) ? 'Help Text' : 'Placeholder Text'">
                   <UInput class="w-full" v-model="field.placeholder" />
