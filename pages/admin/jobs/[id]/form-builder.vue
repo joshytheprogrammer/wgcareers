@@ -12,7 +12,7 @@ const lastSavedSchema = ref(null); // Track last saved state
 
 // Form schema structure
 const formSchema = ref({
-  title: 'Job Application Form',
+  title: '',
   description: '',
   formStatus: 'draft',
   fields: [],
@@ -117,10 +117,17 @@ const loadSchema = async () => {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
-      if (data.formSchema) {
-        formSchema.value = data.formSchema;
-        lastSavedSchema.value = JSON.stringify(data.formSchema); // Store last saved state
-      }
+      
+      // Merge job data with form schema
+      formSchema.value = {
+        title: data.formSchema?.title || data.title + 'Application Form',
+        description: data.formSchema?.description || `We're looking for talented candidates to fill this position. Please complete the application form to be considered for the ${data.title || 'role'}.`,
+        formStatus: data.formSchema?.formStatus || 'draft',
+        fields: data.formSchema?.fields || [],
+        conditions: data.formSchema?.conditions || []
+      };
+      
+      lastSavedSchema.value = JSON.stringify(data.formSchema); // Store last saved state
     }
   } catch (error) {
     toast.add({ 
@@ -286,6 +293,13 @@ watch(formSchema, () => {
   }
 }, { deep: true });
 
+// Watch for form schema empty to disabe form
+watch(() => formSchema.value.fields, (fields) => {
+  if (fields.length === 0) {
+    formSchema.value.formStatus = 'draft'
+  }
+}, { deep: true })
+
 onMounted(loadSchema);
 </script>
 
@@ -335,7 +349,7 @@ onMounted(loadSchema);
               <UInput class="w-full" v-model="formSchema.title" />
             </UFormField>
             <UFormField label="Description">
-              <UTextarea class="w-full" v-model="formSchema.description" />
+              <UTextarea :rows="12" class="w-full" v-model="formSchema.description" />
             </UFormField>
             <UFormField label="Form Status">
               <USelect 
@@ -555,6 +569,27 @@ onMounted(loadSchema);
                 </UFormField>
               </div>
             </div>
+          </div>
+        </UCard>
+        <!-- Quick Form Toolbox -->
+        <UCard v-if="formSchema.fields.length != 0">
+          <template #header>
+            <h2 class="font-semibold">Quick Add Fields</h2>
+            <p class="text-sm text-gray-500 mt-1">Click to add new fields to your form</p>
+          </template>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <UButton
+              v-for="type in fieldTypes"
+              :key="type.value"
+              @click="addField(type.value)"
+              :icon="type.icon"
+              :label="type.label"
+              color="gray"
+              variant="outline"
+              size="sm"
+              class="h-full"
+            />
           </div>
         </UCard>
       </div>
