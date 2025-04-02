@@ -21,7 +21,7 @@ const activeTab = ref('0')
 const items = [{ label: 'Responses', slot: 'responses' }, { label: 'Analytics', slot: 'analytics' }, ]
 
 const selectedSubmission = ref(null)
-const individualView = ref(true) // 'individual'(true) or 'question'(false)
+const individualView = ref(true);
 const filters = ref({
   status: 'all',
   dateRange: null,
@@ -100,8 +100,7 @@ onMounted(async () => {
     const apexModule = await import('vue3-apexcharts')
     VueApexCharts.value = apexModule.default
   } catch (e) {
-      console.error("Failed to load dynamic libraries:", e);
-      // Handle error loading libraries if necessary
+    console.error("Failed to load dynamic libraries:", e);
   }
 
 
