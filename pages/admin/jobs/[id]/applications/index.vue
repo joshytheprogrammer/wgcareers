@@ -638,6 +638,42 @@ const deleteSummary = (id) => {
   }
 }
 
+// Add these new utility functions
+const formatRelativeTime = (dateString) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now - date) / 1000)
+  
+  if (diffInSeconds < 60) return 'Just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+  
+  return date.toLocaleDateString()
+}
+
+const getSummaryPreview = (content) => {
+  const plainText = content.replace(/<[^>]*>?/gm, '') // Strip HTML tags
+  return plainText.substring(0, 300) + (plainText.length > 300 ? '...' : '')
+}
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.add({ 
+      title: 'Copied to clipboard', 
+      color: 'green',
+      timeout: 2000
+    })
+  } catch (err) {
+    toast.add({ 
+      title: 'Failed to copy', 
+      description: err.message, 
+      color: 'red' 
+    })
+  }
+}
+
 // Initialize by loading saved summaries
 onMounted(() => {
   loadSavedSummaries()
@@ -887,7 +923,7 @@ onMounted(() => {
         <!-- Analytics Tab -->
         <template #analytics>
           <div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 my-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 my-4">
               <UCard>
                 <template #header>
                   <h3 class="font-semibold">Status Distribution</h3>
@@ -921,7 +957,7 @@ onMounted(() => {
               </UCard>
             </div>
 
-            <UCard class="my-8">
+            <UCard class="my-4">
               <template #header>
                 <h3 class="font-semibold">Quick Actions</h3>
               </template>
@@ -959,121 +995,141 @@ onMounted(() => {
               /> -->
             </UCard>
             
-            <UCard class="my-8">
-              <div  v-if="savedSummaries.length > 0 || aiAnalysisResult">
-                <div class="flex justify-between items-center mb-4">
-                  <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <UIcon name="i-heroicons-bookmark" class="w-5 h-5" />
-                    Saved Summaries
-                  </h2>
-                  
-                  <div class="flex gap-2">
-                    <UButton
-                      v-if="aiAnalysisResult"
-                      label="Save Current Analysis"
-                      icon="i-heroicons-bookmark"
-                      color="primary"
-                      size="sm"
-                      :loading="isSaving"
-                      @click="saveCurrentSummary"
-                    />
-                    
-                    <UButton
-                      label="Toggle View"
-                      icon="i-heroicons-eye"
-                      color="gray"
-                      size="sm"
-                      @click="showSavedSummaries = !showSavedSummaries"
-                    />
-                  </div>
-                </div>
+             <!-- AI Analysis Summary Section -->
+            <UCard  v-if="aiAnalysisResult" class="my-4 relative overflow-hidden">
+              <!-- Decorative elements -->
+              <div class="absolute top-0 right-0 w-32 h-32 opacity-10">
+                <UIcon name="i-heroicons-sparkles" class="w-full h-full text-primary-500" />
               </div>
-
-              <div >
-                <Transition name="fade">
-                  <div v-if="showSavedSummaries" class="space-y-4">
-                    <div v-if="savedSummaries.length == 0" class="text-center py-8">
-                      <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto text-gray-400" />
-                      <p class="mt-2 text-gray-500">No saved summaries yet</p>
-                      <p class="text-sm text-gray-400 mt-1">Save an analysis to view it here later</p>
-                    </div>
-
-                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <UCard 
-                        v-for="summary in savedSummaries" 
-                        :key="summary.id"
-                        class="hover:shadow-lg transition-shadow duration-200 relative group"
-                      >
-                        <template #header>
-                          <div class="flex justify-between items-start">
-                            <h3 class="font-medium truncate">{{ summary.title }}</h3>
-                            <UTooltip text="Delete summary">
-                              <UButton
-                                icon="i-heroicons-trash"
-                                color="red"
-                                variant="ghost"
-                                size="xs"
-                                class="opacity-0 group-hover:opacity-100 transition-opacity"
-                                @click="deleteSummary(summary.id)"
-                              />
-                            </UTooltip>
-                          </div>
-                          <p class="text-xs text-gray-500 mt-1">
-                            {{ new Date(summary.createdAt).toLocaleString() }}
-                          </p>
-                        </template>
-
-                        <div class="prose prose-sm dark:prose-invert max-h-40 overflow-y-auto">
-                          <MDC :value="summary.content.substring(0, 300) + (summary.content.length > 300 ? '...' : '')" />
-                        </div>
-
-                        <template #footer>
-                          <UButton
-                            block
-                            label="View Full Summary"
-                            icon="i-heroicons-arrow-top-right-on-square"
-                            size="xs"
-                            @click="aiAnalysisResult = summary.content"
-                          />
-                        </template>
-                      </UCard>
-                    </div>
-                  </div>
-                </Transition>
-              </div>
-            </UCard>
-
-            <div class="py-8">
-              <UCard v-if="aiAnalysisResult" class="relative overflow-hidden">
-                <!-- Decorative elements -->
-                <div class="absolute top-0 right-0 w-32 h-32 opacity-10">
-                  <UIcon name="i-heroicons-sparkles" class="w-full h-full text-primary-500" />
-                </div>
-                
-                <!-- Header -->
-                <div class="flex items-center gap-3 mb-4">
+              
+              <!-- Header with save action -->
+              <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
                   <UIcon name="i-heroicons-chat-bubble-left-right" class="w-6 h-6 text-primary-500" />
                   <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
                     AI Analysis Summary
                   </h2>
                 </div>
-                
-                <!-- Content with subtle animation -->
-                <div class="relative">
-                  <div class="prose prose-sm dark:prose-invert max-w-none" v-if="aiAnalysisResult">
-                    <MDC :value="aiAnalysisResult" class="ai-summary transition-all duration-300" />
-                  </div>
-                  
-                  <!-- Watermark -->
-                  <div class="absolute -bottom-2 -right-2 text-xs text-gray-400 dark:text-gray-600">
-                    AI Generated Content
-                  </div>
+                <UButton
+                  label="Save Analysis"
+                  icon="i-heroicons-bookmark"
+                  color="primary"
+                  size="lg"
+                  :loading="isSaving"
+                  @click="saveCurrentSummary"
+                />
+              </div>
+              
+              <!-- Content -->
+              <div class="relative">
+                <div class="prose prose-sm dark:prose-invert max-w-none" v-if="aiAnalysisResult">
+                  <MDC :value="aiAnalysisResult" class="ai-summary transition-all duration-300" />
                 </div>
                 
-                <!-- Fade effect at bottom -->
-                <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-900"></div>
-              </UCard>
-            </div>
+                <!-- Watermark -->
+                <div class="absolute -bottom-2 -right-2 text-xs text-gray-400 dark:text-gray-600">
+                  AI Generated Content
+                </div>
+              </div>
+              
+              <!-- Fade effect at bottom -->
+              <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-900"></div>
+            </UCard>
+            
+
+            <!-- Saved Summaries Section -->
+            <UCard v-if="savedSummaries.length > 0" class="mb-8">
+              <template #header>
+                <div class="flex justify-between items-center">
+                  <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <UIcon name="i-heroicons-bookmark" class="w-5 h-5" />
+                    Saved Summaries
+                    <UBadge :label="savedSummaries.length" color="gray" variant="subtle" />
+                  </h2>
+                  
+                  <UButton
+                    :label="showSavedSummaries ? 'Hide' : 'Show'"
+                    :icon="showSavedSummaries ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                    color="gray"
+                    size="sm"
+                    @click="showSavedSummaries = !showSavedSummaries"
+                  />
+                </div>
+              </template>
+
+              <Transition name="fade-slide">
+                <div v-if="showSavedSummaries" class="space-y-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <UCard 
+                      v-for="summary in savedSummaries" 
+                      :key="summary.id"
+                      class="hover:shadow-lg transition-all duration-200 relative group h-full flex flex-col"
+                    >
+                      <template #header>
+                        <div class="flex justify-between items-start gap-2">
+                          <h3 class="font-medium truncate flex-1">{{ summary.title }}</h3>
+                          <UTooltip text="Delete summary">
+                            <UButton
+                              icon="i-heroicons-trash"
+                              color="red"
+                              variant="ghost"
+                              size="xs"
+                              class="opacity-0 group-hover:opacity-100 transition-opacity"
+                              @click="deleteSummary(summary.id)"
+                            />
+                          </UTooltip>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                          {{ formatRelativeTime(summary.createdAt) }}
+                        </p>
+                      </template>
+
+                      <div class="prose prose-sm dark:prose-invert max-h-40 overflow-y-auto flex-1">
+                        <MDC :value="getSummaryPreview(summary.content)" />
+                      </div>
+
+                      <template #footer>
+                        <div class="flex gap-2">
+                          <UButton
+                            label="View"
+                            icon="i-heroicons-document-text"
+                            size="xs"
+                            @click="aiAnalysisResult = summary.content"
+                            class="flex-1"
+                          />
+                          <UButton
+                            label="Copy"
+                            icon="i-heroicons-clipboard"
+                            size="xs"
+                            color="gray"
+                            variant="outline"
+                            @click="copyToClipboard(summary.content)"
+                          />
+                        </div>
+                      </template>
+                    </UCard>
+                  </div>
+                </div>
+              </Transition>
+            </UCard>
+
+            <!-- Empty State (only shown when there's an analysis but no saved summaries) -->
+            <UCard v-if="aiAnalysisResult && savedSummaries.length === 0" class="mb-8">
+              <div class="text-center py-8">
+                <div class="mx-auto w-24 h-24 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center mb-4">
+                  <UIcon name="i-heroicons-inbox" class="w-12 h-12 text-primary-500" />
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">No saved summaries yet</h3>
+                <p class="text-gray-500 mt-1">Save your current analysis to view it here later</p>
+                <UButton
+                  label="Save Current Analysis"
+                  icon="i-heroicons-bookmark"
+                  color="primary"
+                  class="mt-4"
+                  @click="saveCurrentSummary"
+                />
+              </div>
+            </UCard>
           </div>
         </template>
       </UTabs>
@@ -1127,7 +1183,7 @@ onMounted(() => {
 }
 
 .ai-summary a {
-  color: var(--color-primary-600);
+  color: black;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1223,6 +1279,26 @@ onMounted(() => {
 .dark .ai-summary tbody tr:nth-child(even) {
   background: var(--color-gray-800);
 }
+/* Enhanced transitions */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+/* Card hover effects */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1 !important;
+}
 
 /* Custom scrollbar for summary cards */
 .prose::-webkit-scrollbar {
@@ -1246,6 +1322,7 @@ onMounted(() => {
 .dark .prose::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
 }
+
 
 /* Card hover effect */
 .group:hover .group-hover\:opacity-100 {
