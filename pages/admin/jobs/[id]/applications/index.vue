@@ -470,13 +470,53 @@ const analyzeApplications = async () => {
   analyzing.value = true
   aiAnalysisResult.value = null
 
+  const prompt = `
+    You are an experienced hiring manager analyzing job applications for the position of ${job.value?.title}. Your goal is to extract meaningful insights to facilitate the hiring decision.
+
+    ### Instructions:
+    1. **Summarize the Applications:** Analyze the following job applications and extract key details, including:
+      - Candidate Name/ID
+      - Years of Relevant Experience
+      - Key Skills & Technologies Used
+      - Notable Achievements & Projects
+      - Certifications (if available)
+      - Education Background
+      - Portfolio/Links (if provided)
+
+    2. **Identify Common Themes:** 
+      - What skills, experiences, and tools are most frequently mentioned across applications?
+      - Are there any evident trends in the applicant pool (e.g., most applicants have experience with a specific tool)?
+      - Identify any gaps in the submissions (e.g., missing certifications, lack of portfolio links).
+
+    3. **Evaluate Strengths & Weaknesses:** 
+      - For each candidate, list their standout qualities that make them a strong fit.
+      - Highlight any red flags or areas of concern (e.g., lack of required skills, vague job history).
+      - Compare top candidates based on their strengths and weaknesses.
+
+    4. **Compare & Contrast Candidates:**
+      - Rank candidates based on their overall suitability.
+      - Provide a table with columns: Candidate ID, Experience Level, Strengths, Weaknesses, and Fit Score (1-10).
+
+    5. **Generate Follow-Up Questions:** 
+      - List specific questions or missing information for each candidate that would help in making a final decision.
+
+    ### Input Data:
+    ${JSON.stringify(filteredSubmissions.value, null, 2)}
+
+    ### Output Format:
+    - Provide a structured analysis in bullet points for easy readability.
+    - Summarize findings at the end with top candidates and recommended next steps.
+
+    Use your expertise to provide actionable hiring recommendations.
+`
+
+
   try {
     // This would call your actual API endpoint (no changes needed here)
-    const { data } = await useFetch('/api/ai-analysis', {
+    const { data } = await useFetch('/api/gemini', {
       method: 'POST',
       body: {
-        jobTitle: job.value?.title,
-        submissions: filteredSubmissions.value
+        prompt: prompt
       }
     })
 
