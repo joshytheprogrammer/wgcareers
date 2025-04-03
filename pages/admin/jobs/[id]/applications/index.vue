@@ -530,8 +530,9 @@ const analyzeApplications = async () => {
   ### Output Format:
   - Provide a structured analysis in bullet points for easy readability.
   - Summarize findings at the end with top candidates and recommended next steps.
+  - Always respond with in HUMAN readable terms. Don't send any JSON data or any hidden form ID or things like that. Use words with human meanings.
 
-  Use your expertise to provide actionable hiring recommendations.
+  Use your expertise to provide actionable hiring recommendations. 
 `;
 
   try {
@@ -886,7 +887,7 @@ onMounted(() => {
         <!-- Analytics Tab -->
         <template #analytics>
           <div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 my-8">
               <UCard>
                 <template #header>
                   <h3 class="font-semibold">Status Distribution</h3>
@@ -920,7 +921,7 @@ onMounted(() => {
               </UCard>
             </div>
 
-            <UCard>
+            <UCard class="my-8">
               <template #header>
                 <h3 class="font-semibold">Quick Actions</h3>
               </template>
@@ -958,7 +959,91 @@ onMounted(() => {
               /> -->
             </UCard>
             
-            <UContainer class="py-8">
+            <UCard class="my-8">
+              <div  v-if="savedSummaries.length > 0 || aiAnalysisResult">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <UIcon name="i-heroicons-bookmark" class="w-5 h-5" />
+                    Saved Summaries
+                  </h2>
+                  
+                  <div class="flex gap-2">
+                    <UButton
+                      v-if="aiAnalysisResult"
+                      label="Save Current Analysis"
+                      icon="i-heroicons-bookmark"
+                      color="primary"
+                      size="sm"
+                      :loading="isSaving"
+                      @click="saveCurrentSummary"
+                    />
+                    
+                    <UButton
+                      label="Toggle View"
+                      icon="i-heroicons-eye"
+                      color="gray"
+                      size="sm"
+                      @click="showSavedSummaries = !showSavedSummaries"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div >
+                <Transition name="fade">
+                  <div v-if="showSavedSummaries" class="space-y-4">
+                    <div v-if="savedSummaries.length == 0" class="text-center py-8">
+                      <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto text-gray-400" />
+                      <p class="mt-2 text-gray-500">No saved summaries yet</p>
+                      <p class="text-sm text-gray-400 mt-1">Save an analysis to view it here later</p>
+                    </div>
+
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <UCard 
+                        v-for="summary in savedSummaries" 
+                        :key="summary.id"
+                        class="hover:shadow-lg transition-shadow duration-200 relative group"
+                      >
+                        <template #header>
+                          <div class="flex justify-between items-start">
+                            <h3 class="font-medium truncate">{{ summary.title }}</h3>
+                            <UTooltip text="Delete summary">
+                              <UButton
+                                icon="i-heroicons-trash"
+                                color="red"
+                                variant="ghost"
+                                size="xs"
+                                class="opacity-0 group-hover:opacity-100 transition-opacity"
+                                @click="deleteSummary(summary.id)"
+                              />
+                            </UTooltip>
+                          </div>
+                          <p class="text-xs text-gray-500 mt-1">
+                            {{ new Date(summary.createdAt).toLocaleString() }}
+                          </p>
+                        </template>
+
+                        <div class="prose prose-sm dark:prose-invert max-h-40 overflow-y-auto">
+                          <MDC :value="summary.content.substring(0, 300) + (summary.content.length > 300 ? '...' : '')" />
+                        </div>
+
+                        <template #footer>
+                          <UButton
+                            block
+                            label="View Full Summary"
+                            icon="i-heroicons-arrow-top-right-on-square"
+                            size="xs"
+                            @click="aiAnalysisResult = summary.content"
+                          />
+                        </template>
+                      </UCard>
+                    </div>
+                  </div>
+                </Transition>
+              </div>
+            </UCard>
+
+            <div class="py-8">
               <UCard v-if="aiAnalysisResult" class="relative overflow-hidden">
                 <!-- Decorative elements -->
                 <div class="absolute top-0 right-0 w-32 h-32 opacity-10">
@@ -988,87 +1073,7 @@ onMounted(() => {
                 <!-- Fade effect at bottom -->
                 <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-900"></div>
               </UCard>
-            </UContainer>
-
-            <UContainer class="py-4" v-if="aiAnalysisResult || savedSummaries.length > 0">
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <UIcon name="i-heroicons-bookmark" class="w-5 h-5" />
-                  Saved Summaries
-                </h2>
-                
-                <div class="flex gap-2">
-                  <UButton
-                    v-if="aiAnalysisResult"
-                    label="Save Current Analysis"
-                    icon="i-heroicons-bookmark"
-                    color="primary"
-                    size="sm"
-                    :loading="isSaving"
-                    @click="saveCurrentSummary"
-                  />
-                  
-                  <UButton
-                    label="Toggle View"
-                    icon="i-heroicons-eye"
-                    color="gray"
-                    size="sm"
-                    @click="showSavedSummaries = !showSavedSummaries"
-                  />
-                </div>
-              </div>
-
-              <Transition name="fade">
-                <div v-if="showSavedSummaries" class="space-y-4">
-                  <div v-if="savedSummaries.length === 0" class="text-center py-8">
-                    <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto text-gray-400" />
-                    <p class="mt-2 text-gray-500">No saved summaries yet</p>
-                    <p class="text-sm text-gray-400 mt-1">Save an analysis to view it here later</p>
-                  </div>
-
-                  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <UCard 
-                      v-for="summary in savedSummaries" 
-                      :key="summary.id"
-                      class="hover:shadow-lg transition-shadow duration-200 relative group"
-                    >
-                      <template #header>
-                        <div class="flex justify-between items-start">
-                          <h3 class="font-medium truncate">{{ summary.title }}</h3>
-                          <UTooltip text="Delete summary">
-                            <UButton
-                              icon="i-heroicons-trash"
-                              color="red"
-                              variant="ghost"
-                              size="xs"
-                              class="opacity-0 group-hover:opacity-100 transition-opacity"
-                              @click="deleteSummary(summary.id)"
-                            />
-                          </UTooltip>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-1">
-                          {{ new Date(summary.createdAt).toLocaleString() }}
-                        </p>
-                      </template>
-
-                      <div class="prose prose-sm dark:prose-invert max-h-40 overflow-y-auto">
-                        <MDC :value="summary.content.substring(0, 300) + (summary.content.length > 300 ? '...' : '')" />
-                      </div>
-
-                      <template #footer>
-                        <UButton
-                          block
-                          label="View Full Summary"
-                          icon="i-heroicons-arrow-top-right-on-square"
-                          size="xs"
-                          @click="aiAnalysisResult = summary.content"
-                        />
-                      </template>
-                    </UCard>
-                  </div>
-                </div>
-              </Transition>
-            </UContainer>
+            </div>
           </div>
         </template>
       </UTabs>
