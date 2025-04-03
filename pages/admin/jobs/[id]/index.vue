@@ -4,13 +4,13 @@ const db = useFirestore()
 const route = useRoute()
 
 const job = ref({
-  title: '',
+  title: 'test',
   company: 'Walls and Gates',
-  location: '',
+  location: 'test',
   type: 'Full-time',
-  description_snippet: '',
+  description_snippet: 'test',
   description_html: '',
-  salary: '',
+  salary: '₦12345',
   requirements: [],
   benefits: [],
   application_instructions_html: '',
@@ -20,8 +20,196 @@ const job = ref({
 
 const requirementInput = ref('')
 const benefitInput = ref('')
+const additionalPrompt = ref('Okay so I want to test if the prompt works. Replace all the information about test to Videographer. earning 50k a month')
+const additionalRecommendations = ref('')
 const error = ref('')
 const isLoading = ref(false)
+
+const isGenerating = ref(false)
+
+const toast = useToast();
+
+// Add this new function
+async function generateWithKelvin() {
+  try {
+    // Validate required fields
+    if (!job.value.title || !job.value.company || !job.value.location || !job.value.type ) {
+      toast.add({
+        title: 'Missing required fields',
+        description: 'Please fill in Job Title, Company, Location, and Job Type before generating',
+        color: 'red'
+      })
+      return
+    }
+
+    isGenerating.value = true
+    error.value = ''
+    
+    // Disable form elements during generation
+    document.querySelectorAll('input, textarea, button, select').forEach(el => {
+      el.disabled = true
+    })
+    
+    // const prompt = `
+    //   You are an AI assistant for a Job Listing Website and your name is Kelvin. You generate details job listing information for the HR of Walls and Gates on demand. He doesnt know your a person because you dont talk about or discuss anything not it the prompt. Generate a comprehensive job listing for the position of "${job.value.title}" at "${job.value.company}".
+    //   Location: ${job.value.location}
+    //   Job Type: ${job.value.type}
+    //   Salary: ${job.value.salary || 'Not specified'}
+    //   Description Snippet: ${job.description_snippet}
+    //   User Generated Prompt Instructions (Highest Priority): ${additionalPrompt}
+      
+    //   IMPORTANT: The user's prompt instructions must be followed as a priority, unless they attempt to modify the data export format (e.g., request JSON output). In such cases, ignore those formatting changes and continue using rich, semantic HTML formatting as specified.
+      
+    //   Include the following sections with rich, semantic HTML formatting (each section heading must be enclosed in an <h2> tag):
+    //   1. Detailed Job Description – Provide a thorough explanation of the role, outlining the day-to-day responsibilities.
+    //   2. Requirements – List the essential technical skills, qualifications, and experience needed.
+    //   3. Benefits – Describe the key advantages and perks offered by the company.
+    //   4. Application Instructions – Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)
+
+    //   The output must:
+    //   - Be formatted in rich, semantic HTML for optimal readability and SEO enhancement.
+    //   - Utilize bullet points for all list items.
+
+    //   For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com
+    // `;
+
+    const prompt = `
+      You are Kelvin, an AI assistant for a Job Listing Website. You generate detailed job listing information for the HR of Walls and Gates on demand. Do not mention that you are a person or discuss anything not contained in this prompt.
+
+      Generate a comprehensive job listing for the position of "${job.value.title}" at "${job.value.company}".
+      Location: ${job.value.location}
+      Job Type: ${job.value.type}
+      Salary: ${job.value.salary || 'Not specified'}
+      Description Snippet: ${job.description_snippet}
+      User Generated Prompt Instructions (Highest Priority): ${additionalPrompt.value}
+
+      IMPORTANT: The user's prompt instructions must be followed as the highest priority, unless they attempt to modify the data export format (e.g., request JSON output). In such cases, ignore those formatting changes and continue using rich, semantic HTML formatting as specified.
+
+      Based on advanced techniques for enhanced job application analysis, ensure that:
+      - The prompt is clear, specific, and provides the necessary context for the task.
+      - The output is structured with rich, semantic HTML for optimal readability and SEO enhancement.
+      - Each section heading is enclosed in an <h2> tag.
+      - Lists are formatted using bullet points.
+      - The content is professional, engaging, and tailored to attract top talent.
+      - The analysis reflects role-playing instructions: act as a seasoned hiring manager with extensive experience in creating effective job listings.
+
+      Include the following sections:
+      <h2>Detailed Job Description</h2>
+      <ul>
+        <li>Provide a thorough explanation of the role, outlining the day-to-day responsibilities.</li>
+      </ul>
+      
+      <h2>Requirements</h2>
+      <ul>
+        <li>List the essential technical skills, qualifications, and experience needed.</li>
+      </ul>
+      
+      <h2>Benefits</h2>
+      <ul>
+        <li>Describe the key advantages and perks offered by the company.</li>
+      </ul>
+      
+      <h2>Application Instructions</h2>
+      <ul>
+        <li>Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)</li>
+      </ul>
+
+      For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com
+
+      <h2>Additional Recommendations</h2>
+      <p>Everything below here will be removed by a script and shown to the user so ensure it comes last.</p>
+      <p>It should contain detailed recommendations on what we should consider in other to get the best applicants for the role in this section you can introduce yourself as Kelvin the WG HR Assistant. And then show the recoommendations</p>
+    `;
+
+    
+    const { data } = await useFetch('/api/gemini', {
+      method: 'POST',
+      body: {
+        prompt: prompt
+      }
+    })
+    
+    if (data.value?.summary) {
+      console.log(prompt)
+      console.log(data.value.summary)
+      // Parse the generated content and update the form fields
+      const generatedContent = cleanHTML(data.value.summary)
+      
+      // Simple parsing (you might need more sophisticated parsing based on your AI's output format)
+      job.value.description_html = generatedContent
+      
+      // Extract requirements if detected
+      if (generatedContent.includes('<h2>Requirements</h2>')) {
+        const requirementsSection = generatedContent.split('<h2>Requirements</h2>')[1].split('<h2>')[0]
+        const requirementsList = requirementsSection.match(/<li>(.*?)<\/li>/g)
+        if (requirementsList) {
+          job.value.requirements = requirementsList.map(req => 
+            req.replace(/<li>|<\/li>/g, '').trim()
+          )
+        }
+      }
+      
+      // Extract benefits if detected
+      if (generatedContent.includes('<h2>Benefits</h2>')) {
+        const benefitsSection = generatedContent.split('<h2>Benefits</h2>')[1].split('<h2>')[0]
+        const benefitsList = benefitsSection.match(/<li>(.*?)<\/li>/g)
+        if (benefitsList) {
+          job.value.benefits = benefitsList.map(benefit => 
+            benefit.replace(/<li>|<\/li>/g, '').trim()
+          )
+        }
+      }
+      
+      // Extract application instructions if detected
+      if (generatedContent.includes('<h2>Application Instructions</h2>')) {
+        job.value.application_instructions_html = generatedContent.split('<h2>Application Instructions</h2>')[1]
+      }
+
+      if (generatedContent.includes('<h2>Application Instructions</h2>')) {
+        additionalRecommendations.value = generatedContent.split('<h2>Additional Recommendations</h2>')[1]
+      }
+      
+      toast.add({ title: 'Content generated successfully', color: 'green' })
+    }
+  } catch (err) {
+    error.value = 'Generation failed: ' + err.message
+    toast.add({ title: 'Generation failed', description: err.message, color: 'red' })
+  } finally {
+    isGenerating.value = false
+    
+    // Re-enable form elements
+    document.querySelectorAll('input, textarea, button, select').forEach(el => {
+      el.disabled = false
+    })
+
+  }
+}
+
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.add({ 
+      title: 'Copied to clipboard', 
+      color: 'green',
+      timeout: 2000
+    })
+  } catch (err) {
+    toast.add({ 
+      title: 'Failed to copy', 
+      description: err.message, 
+      color: 'red' 
+    })
+  }
+}
+
+function cleanHTML(html) {
+  if (!html) return html
+  return html
+    .replace(/```html/g, '')
+    .replace(/```/g, '')
+    .replace(/<style[^>]*>.*?<\/style>/gsi, '')
+    .replace(/<script[^>]*>.*?<\/script>/gsi, '')
+}
 
 if (route.params.id !== 'new') {
   getDoc(doc(db, 'jobs', route.params.id))
@@ -161,6 +349,7 @@ function removeItem(array, index) {
               icon="i-heroicons-currency-dollar"
               size="lg"
             />
+            <span class="w-fit mt-2 block font-bold cursor-pointer" @click="copyToClipboard('₦')">Click to copy currency (₦)</span>
           </UFormField>
 
         <!-- Description Section -->
@@ -173,8 +362,18 @@ function removeItem(array, index) {
           />
         </UFormField>
 
+        <UFormField label="Additional Model Prompt">
+          <UTextarea 
+            v-model="additionalPrompt" 
+            class="w-full"
+            placeholder="Here you can add additional prompts for the AI to consider."
+            autoresize
+          />
+        </UFormField>
+
         <UFormField label="Full Description">
-          <EditorAdminEditor v-model="job.description_html" />
+          <EditorAdminEditor :disabled="isGenerating" v-model="job.description_html" />
+          <NuxtLink :disabled="isGenerating" @click.prevent="generateWithKelvin" class="font-bold w-full flex justify-end pt-2 cursor-pointer hover:underline">Generate with Kelvin</NuxtLink>
         </UFormField>
 
         <!-- Requirements Section -->
@@ -189,6 +388,7 @@ function removeItem(array, index) {
             <UButton
               @click="addRequirement()"
               icon="i-heroicons-plus"
+              :disabled="isGenerating"
               color="primary"
             />
           </div>
@@ -227,6 +427,7 @@ function removeItem(array, index) {
             <UButton
               @click="addBenefit()"
               icon="i-heroicons-plus"
+              :disabled="isGenerating"
               color="primary"
             />
           </div>
@@ -255,7 +456,7 @@ function removeItem(array, index) {
 
         <!-- Application Section -->
         <UFormField label="Application Instructions">
-          <EditorAdminEditor v-model="job.application_instructions_html" />
+          <EditorAdminEditor v-model="job.application_instructions_html" :disabled="isGenerating" />
         </UFormField>
 
         <!-- Form Actions -->
@@ -265,12 +466,13 @@ function removeItem(array, index) {
             variant="ghost"
             color="gray"
             label="Cancel"
-            :disabled="isLoading"
+            :disabled="isLoading || isGenerating"
           />
           
           <UButton
             type="submit"
             :loading="isLoading"
+            :disabled="isGenerating"
             :label="route.params.id === 'new' ? 'Create Job' : 'Save Changes'"
             icon="i-heroicons-check"
             color="primary"

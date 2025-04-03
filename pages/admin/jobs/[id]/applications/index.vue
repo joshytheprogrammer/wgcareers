@@ -1208,6 +1208,7 @@ onMounted(() => {
 .ai-summary table {
   width: 100%;
   border-collapse: collapse;
+  overflow-x: auto;
   margin: 1.5em 0;
   font-size: 0.95rem;
   background: var(--color-gray-50);
