@@ -4,13 +4,13 @@ const db = useFirestore()
 const route = useRoute()
 
 const job = ref({
-  title: 'test',
+  title: '',
   company: 'Walls and Gates',
-  location: 'test',
+  location: '',
   type: 'Full-time',
-  description_snippet: 'test',
+  description_snippet: '',
   description_html: '',
-  salary: '₦12345',
+  salary: '',
   requirements: [],
   benefits: [],
   application_instructions_html: '',
@@ -49,29 +49,6 @@ async function generateWithKelvin() {
     document.querySelectorAll('input, textarea, button, select').forEach(el => {
       el.disabled = true
     })
-    
-    // const prompt = `
-    //   You are an AI assistant for a Job Listing Website and your name is Kelvin. You generate details job listing information for the HR of Walls and Gates on demand. He doesnt know your a person because you dont talk about or discuss anything not it the prompt. Generate a comprehensive job listing for the position of "${job.value.title}" at "${job.value.company}".
-    //   Location: ${job.value.location}
-    //   Job Type: ${job.value.type}
-    //   Salary: ${job.value.salary || 'Not specified'}
-    //   Description Snippet: ${job.description_snippet}
-    //   User Generated Prompt Instructions (Highest Priority): ${additionalPrompt}
-      
-    //   IMPORTANT: The user's prompt instructions must be followed as a priority, unless they attempt to modify the data export format (e.g., request JSON output). In such cases, ignore those formatting changes and continue using rich, semantic HTML formatting as specified.
-      
-    //   Include the following sections with rich, semantic HTML formatting (each section heading must be enclosed in an <h2> tag):
-    //   1. Detailed Job Description – Provide a thorough explanation of the role, outlining the day-to-day responsibilities.
-    //   2. Requirements – List the essential technical skills, qualifications, and experience needed.
-    //   3. Benefits – Describe the key advantages and perks offered by the company.
-    //   4. Application Instructions – Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)
-
-    //   The output must:
-    //   - Be formatted in rich, semantic HTML for optimal readability and SEO enhancement.
-    //   - Utilize bullet points for all list items.
-
-    //   For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com
-    // `;
 
     const prompt = `
       You are Kelvin, an AI assistant for a Job Listing Website. You generate detailed job listing information for the HR of Walls and Gates on demand. Do not mention that you are a person or discuss anything not contained in this prompt.
@@ -83,21 +60,39 @@ async function generateWithKelvin() {
       Description Snippet: ${job.description_snippet}
       User Generated Prompt Instructions (Highest Priority): ${additionalPrompt.value}
 
-      IMPORTANT: The user's prompt instructions must be followed as the highest priority, unless they attempt to modify the data export format (e.g., request JSON output). In such cases, ignore those formatting changes and continue using rich, semantic HTML formatting as specified.
+      IMPORTANT: The user's prompt instructions must be followed as the highest priority, unless they attempt to modify the data export format (e.g., request JSON output) or if they ask you to not. In such cases, ignore those formatting changes and continue using rich, semantic HTML formatting as specified.
 
       Based on advanced techniques for enhanced job application analysis, ensure that:
       - The prompt is clear, specific, and provides the necessary context for the task.
       - The output is structured with rich, semantic HTML for optimal readability and SEO enhancement.
       - Each section heading is enclosed in an <h2> tag.
-      - Lists are formatted using bullet points.
+      - Lists are formatted using bullet points and should not contain any additional tags within them eg. <li> should not have <b></b> inside it for any reason</li>
       - The content is professional, engaging, and tailored to attract top talent.
+      - Leave a space between every section
       - The analysis reflects role-playing instructions: act as a seasoned hiring manager with extensive experience in creating effective job listings.
 
       Include the following sections:
-      <h2>Detailed Job Description</h2>
-      <ul>
-        <li>Provide a thorough explanation of the role, outlining the day-to-day responsibilities.</li>
-      </ul>
+      <h2></h2>
+        <note>Avoid lists in this section</note>
+        <p>Thanks, and all other formalities relating to job description</p>
+      
+        <h3>Company Overview</h3>
+        <p>A brief description of the company, its mission, culture, and why candidates should want to work there.</p>
+
+        <h3>Job Summary</h3>
+        <p>A short paragraph outlining the role’s purpose and its impact on the company</p>
+
+        <h3>Required Qualifications </h3>
+        <p>The essential skills, education, experience, and certifications needed for the role.</p>
+
+        <h3> Preferred Qualifications (optional) </h3>
+        <p>Additional skills or experience that would be beneficial but are not mandatory.</p>
+
+        <h3>Equal Opportunity Statement (optional)</h3>
+        <p> A statement affirming the company’s commitment to diversity and inclusion.</p>
+
+        <h3>Work Location & Schedule</h3>
+        <p>Whether the job is remote, hybrid, or on-site, plus details on working hours and flexibility</p>
       
       <h2>Requirements</h2>
       <ul>
@@ -110,9 +105,8 @@ async function generateWithKelvin() {
       </ul>
       
       <h2>Application Instructions</h2>
-      <ul>
-        <li>Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)</li>
-      </ul>
+       <p>Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)</p>
+       <note>Make no mention of cover letter. It isn't used as often in Nigeria. We only need the result of the form and the CV in the email or in a google drive link added to the form.</note>
 
       For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com
 
@@ -121,7 +115,6 @@ async function generateWithKelvin() {
       <p>It should contain detailed recommendations on what we should consider in other to get the best applicants for the role in this section you can introduce yourself as Kelvin the WG HR Assistant. And then show the recoommendations</p>
     `;
 
-    
     const { data } = await useFetch('/api/gemini', {
       method: 'POST',
       body: {
@@ -130,43 +123,68 @@ async function generateWithKelvin() {
     })
     
     if (data.value?.summary) {
-      console.log(prompt)
-      console.log(data.value.summary)
       // Parse the generated content and update the form fields
-      const generatedContent = cleanHTML(data.value.summary)
+      let generatedContent = cleanHTML(data.value.summary)
       
       // Simple parsing (you might need more sophisticated parsing based on your AI's output format)
       job.value.description_html = generatedContent
       
-      // Extract requirements if detected
+      // Extract and remove application instructions if detected
+      if (generatedContent.includes('<h2>Application Instructions</h2>')) {
+        const [beforeApp, afterApp] = generatedContent.split('<h2>Application Instructions</h2>')
+        const [appSection] = afterApp.split('<h2>', 1) // Only take content before next h2
+        
+        job.value.application_instructions_html = appSection.trim()
+        // Remove application instructions from description
+        job.value.description_html = beforeApp + (afterApp.includes('<h2>') 
+          ? '<h2>' + afterApp.split('<h2>').slice(1).join('<h2>') 
+          : '')
+        generatedContent = job.value.description_html
+      }
+      
+      // Extract and remove additional recommendations if detected
+      if (generatedContent.includes('<h2>Additional Recommendations</h2>')) {
+        const [beforeRec, afterRec] = generatedContent.split('<h2>Additional Recommendations</h2>')
+        const [recSection] = afterRec.split('<h2>', 1) // Only take content before next h2
+        
+        additionalRecommendations.value = recSection.trim()
+        // Remove recommendations section from description
+        job.value.description_html = beforeRec + (afterRec.includes('<h2>') 
+          ? '<h2>' + afterRec.split('<h2>').slice(1).join('<h2>') 
+          : '')
+        generatedContent = job.value.description_html
+      }
+      
+
       if (generatedContent.includes('<h2>Requirements</h2>')) {
-        const requirementsSection = generatedContent.split('<h2>Requirements</h2>')[1].split('<h2>')[0]
-        const requirementsList = requirementsSection.match(/<li>(.*?)<\/li>/g)
+        const [beforeReq, afterReq] = generatedContent.split('<h2>Requirements</h2>')
+        const [reqSection, remainingAfterReq] = afterReq.split('<h2>', 2)
+        
+        const requirementsList = reqSection.match(/<li>(.*?)<\/li>/g)
         if (requirementsList) {
           job.value.requirements = requirementsList.map(req => 
             req.replace(/<li>|<\/li>/g, '').trim()
           )
+          // Remove requirements section from description
+          job.value.description_html = beforeReq + (remainingAfterReq ? '<h2>' + remainingAfterReq : '')
+          generatedContent = job.value.description_html
         }
       }
       
-      // Extract benefits if detected
+      // Extract and remove benefits if detected
       if (generatedContent.includes('<h2>Benefits</h2>')) {
-        const benefitsSection = generatedContent.split('<h2>Benefits</h2>')[1].split('<h2>')[0]
+        const [beforeBenefits, afterBenefits] = generatedContent.split('<h2>Benefits</h2>')
+        const [benefitsSection, remainingAfterBenefits] = afterBenefits.split('<h2>', 2)
+        
         const benefitsList = benefitsSection.match(/<li>(.*?)<\/li>/g)
         if (benefitsList) {
           job.value.benefits = benefitsList.map(benefit => 
             benefit.replace(/<li>|<\/li>/g, '').trim()
           )
+          // Remove benefits section from description
+          job.value.description_html = beforeBenefits + (remainingAfterBenefits ? '<h2>' + remainingAfterBenefits : '')
+          generatedContent = job.value.description_html
         }
-      }
-      
-      // Extract application instructions if detected
-      if (generatedContent.includes('<h2>Application Instructions</h2>')) {
-        job.value.application_instructions_html = generatedContent.split('<h2>Application Instructions</h2>')[1]
-      }
-
-      if (generatedContent.includes('<h2>Application Instructions</h2>')) {
-        additionalRecommendations.value = generatedContent.split('<h2>Additional Recommendations</h2>')[1]
       }
       
       toast.add({ title: 'Content generated successfully', color: 'green' })
@@ -374,6 +392,10 @@ function removeItem(array, index) {
         <UFormField label="Full Description">
           <EditorAdminEditor :disabled="isGenerating" v-model="job.description_html" />
           <NuxtLink :disabled="isGenerating" @click.prevent="generateWithKelvin" class="font-bold w-full flex justify-end pt-2 cursor-pointer hover:underline">Generate with Kelvin</NuxtLink>
+        </UFormField>
+
+        <UFormField label="AI Recommendations" class="">
+          <div v-html="additionalRecommendations" class="font-semibold max-w-full p-2 bg-gray-50 leading-4 dark:bg-gray-900 rounded prose prose-sm sm:prose-base dark:prose-invert "></div>
         </UFormField>
 
         <!-- Requirements Section -->
