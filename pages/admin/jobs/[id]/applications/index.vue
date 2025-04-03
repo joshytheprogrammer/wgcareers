@@ -460,6 +460,23 @@ const handleBulkAction = async () => {
   }
 }
 
+// Group responses by question for question-based view
+const questionResponses = computed(() => {
+  if (!job.value?.formSchema?.fields) return []
+  
+  return job.value.formSchema.fields.map(field => {
+    return {
+      question: field.label || field.id,
+      responses: filteredSubmissions.value.map(sub => ({
+        id: sub.id,
+        value: sub.formData ? formatDisplayValue(sub.formData[field.id]) : 'N/A',
+        status: sub.status,
+        date: sub.submittedAtDate?.toLocaleDateString() || 'N/A'
+      }))
+    }
+  })
+});
+
 // AI Analysis Placeholder
 const analyzeApplications = async () => {
   if (filteredSubmissions.value.length === 0) {
@@ -471,45 +488,51 @@ const analyzeApplications = async () => {
   aiAnalysisResult.value = null
 
   const prompt = `
-    You are an experienced hiring manager analyzing job applications for the position of ${job.value?.title}. Your goal is to extract meaningful insights to facilitate the hiring decision.
+  You are an experienced hiring manager analyzing job applications for the position of ${job.value?.title}. Your goal is to extract meaningful insights to facilitate the hiring decision.
 
-    ### Instructions:
-    1. **Summarize the Applications:** Analyze the following job applications and extract key details, including:
-      - Candidate Name/ID
-      - Years of Relevant Experience
-      - Key Skills & Technologies Used
-      - Notable Achievements & Projects
-      - Certifications (if available)
-      - Education Background
-      - Portfolio/Links (if provided)
+  ### Instructions:
+  1. **Summarize the Applications:** Analyze the following job applications and extract key details, including:
+    - Candidate Name/ID
+    - Years of Relevant Experience
+    - Key Skills & Technologies Used
+    - Notable Achievements & Projects
+    - Certifications (if available)
+    - Education Background
+    - Portfolio/Links (if provided)
 
-    2. **Identify Common Themes:** 
-      - What skills, experiences, and tools are most frequently mentioned across applications?
-      - Are there any evident trends in the applicant pool (e.g., most applicants have experience with a specific tool)?
-      - Identify any gaps in the submissions (e.g., missing certifications, lack of portfolio links).
+  2. **Identify Common Themes:** 
+    - What skills, experiences, and tools are most frequently mentioned across applications?
+    - Are there any evident trends in the applicant pool (e.g., most applicants have experience with a specific tool)?
+    - Identify any gaps in the submissions (e.g., missing certifications, lack of portfolio links).
 
-    3. **Evaluate Strengths & Weaknesses:** 
-      - For each candidate, list their standout qualities that make them a strong fit.
-      - Highlight any red flags or areas of concern (e.g., lack of required skills, vague job history).
-      - Compare top candidates based on their strengths and weaknesses.
+  3. **Evaluate Strengths & Weaknesses:** 
+    - For each candidate, list their standout qualities that make them a strong fit.
+    - Highlight any red flags or areas of concern (e.g., lack of required skills, vague job history).
+    - Compare top candidates based on their strengths and weaknesses.
 
-    4. **Compare & Contrast Candidates:**
-      - Rank candidates based on their overall suitability.
-      - Provide a table with columns: Candidate ID, Experience Level, Strengths, Weaknesses, and Fit Score (1-10).
+  4. **Compare & Contrast Candidates:**
+    - Rank candidates based on their overall suitability.
+    - Assign a **Fit Score (1-10)** based on the following weighted criteria:
+      - **Relevant Experience (40%)** – Does the candidate have the required years of experience?
+      - **Skills & Technology Match (30%)** – How well do the candidate’s skills align with the job requirements?
+      - **Achievements & Certifications (15%)** – Are there notable projects, awards, or certifications?
+      - **Portfolio & Supporting Links (10%)** – Did the candidate provide a portfolio or additional proof of expertise?
+      - **Red Flags (-5% per issue)** – Deduct points for critical issues such as missing key skills, vague job history, or unexplained gaps in employment.
 
-    5. **Generate Follow-Up Questions:** 
-      - List specific questions or missing information for each candidate that would help in making a final decision.
+    - Provide a table with columns: **Candidate ID, Experience Level, Strengths, Weaknesses, and Fit Score (1-10).**
+  
+  5. **Generate Follow-Up Questions:** 
+    - List specific questions or missing information for each candidate that would help in making a final decision.
 
-    ### Input Data:
-    ${JSON.stringify(filteredSubmissions.value, null, 2)}
+  ### Input Data:
+  ${JSON.stringify(filteredSubmissions.value, null, 2)}
 
-    ### Output Format:
-    - Provide a structured analysis in bullet points for easy readability.
-    - Summarize findings at the end with top candidates and recommended next steps.
+  ### Output Format:
+  - Provide a structured analysis in bullet points for easy readability.
+  - Summarize findings at the end with top candidates and recommended next steps.
 
-    Use your expertise to provide actionable hiring recommendations.
-`
-
+  Use your expertise to provide actionable hiring recommendations.
+`;
 
   try {
     // This would call your actual API endpoint (no changes needed here)
@@ -529,21 +552,94 @@ const analyzeApplications = async () => {
   }
 }
 
-// Group responses by question for question-based view
-const questionResponses = computed(() => {
-  if (!job.value?.formSchema?.fields) return []
+const savedSummaries = ref([])
+const isSaving = ref(false)
+const showSavedSummaries = ref(false)
+
+// Save current AI analysis to localStorage
+const saveCurrentSummary = () => {
+  if (!aiAnalysisResult.value) {
+    toast.add({ title: 'No analysis to save', color: 'orange' })
+    return
+  }
+
+  isSaving.value = true
   
-  return job.value.formSchema.fields.map(field => {
-    return {
-      question: field.label || field.id,
-      responses: filteredSubmissions.value.map(sub => ({
-        id: sub.id,
-        value: sub.formData ? formatDisplayValue(sub.formData[field.id]) : 'N/A',
-        status: sub.status,
-        date: sub.submittedAtDate?.toLocaleDateString() || 'N/A'
-      }))
+  try {
+    const summary = {
+      id: Date.now().toString(),
+      title: `Analysis for ${job.value?.title || 'Job'} - ${new Date().toLocaleString()}`,
+      content: aiAnalysisResult.value,
+      createdAt: new Date().toISOString()
     }
-  })
+    
+    // Get existing summaries from localStorage
+    const existingSummaries = JSON.parse(localStorage.getItem('savedSummaries') || '[]')
+    
+    // Add new summary
+    const updatedSummaries = [summary, ...existingSummaries]
+    
+    // Save back to localStorage
+    localStorage.setItem('savedSummaries', JSON.stringify(updatedSummaries))
+    
+    // Update reactive state
+    savedSummaries.value = updatedSummaries
+    
+    toast.add({ 
+      title: 'Summary saved', 
+      description: 'You can view it anytime in the Saved Summaries section',
+      color: 'green' 
+    })
+  } catch (error) {
+    toast.add({ 
+      title: 'Failed to save summary', 
+      description: error.message, 
+      color: 'red' 
+    })
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Load saved summaries from localStorage
+const loadSavedSummaries = () => {
+  try {
+    const summaries = JSON.parse(localStorage.getItem('savedSummaries') || [])
+    savedSummaries.value = summaries
+    showSavedSummaries.value = true
+  } catch (error) {
+    toast.add({ 
+      title: 'Failed to load saved summaries', 
+      description: error.message, 
+      color: 'red' 
+    })
+  }
+}
+
+// Delete a saved summary
+const deleteSummary = (id) => {
+  try {
+    const updatedSummaries = savedSummaries.value.filter(summary => summary.id !== id)
+    localStorage.setItem('savedSummaries', JSON.stringify(updatedSummaries))
+    savedSummaries.value = updatedSummaries
+    
+    toast.add({ 
+      title: 'Summary deleted', 
+      color: 'green',
+      timeout: 2000
+    })
+  } catch (error) {
+    toast.add({ 
+      title: 'Failed to delete summary', 
+      description: error.message, 
+      color: 'red' 
+    })
+  }
+}
+
+// Initialize by loading saved summaries
+onMounted(() => {
+  loadSavedSummaries()
 });
 </script>
 
@@ -893,6 +989,86 @@ const questionResponses = computed(() => {
                 <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent dark:from-gray-900"></div>
               </UCard>
             </UContainer>
+
+            <UContainer class="py-4" v-if="aiAnalysisResult || savedSummaries.length > 0">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <UIcon name="i-heroicons-bookmark" class="w-5 h-5" />
+                  Saved Summaries
+                </h2>
+                
+                <div class="flex gap-2">
+                  <UButton
+                    v-if="aiAnalysisResult"
+                    label="Save Current Analysis"
+                    icon="i-heroicons-bookmark"
+                    color="primary"
+                    size="sm"
+                    :loading="isSaving"
+                    @click="saveCurrentSummary"
+                  />
+                  
+                  <UButton
+                    label="Toggle View"
+                    icon="i-heroicons-eye"
+                    color="gray"
+                    size="sm"
+                    @click="showSavedSummaries = !showSavedSummaries"
+                  />
+                </div>
+              </div>
+
+              <Transition name="fade">
+                <div v-if="showSavedSummaries" class="space-y-4">
+                  <div v-if="savedSummaries.length === 0" class="text-center py-8">
+                    <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto text-gray-400" />
+                    <p class="mt-2 text-gray-500">No saved summaries yet</p>
+                    <p class="text-sm text-gray-400 mt-1">Save an analysis to view it here later</p>
+                  </div>
+
+                  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <UCard 
+                      v-for="summary in savedSummaries" 
+                      :key="summary.id"
+                      class="hover:shadow-lg transition-shadow duration-200 relative group"
+                    >
+                      <template #header>
+                        <div class="flex justify-between items-start">
+                          <h3 class="font-medium truncate">{{ summary.title }}</h3>
+                          <UTooltip text="Delete summary">
+                            <UButton
+                              icon="i-heroicons-trash"
+                              color="red"
+                              variant="ghost"
+                              size="xs"
+                              class="opacity-0 group-hover:opacity-100 transition-opacity"
+                              @click="deleteSummary(summary.id)"
+                            />
+                          </UTooltip>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">
+                          {{ new Date(summary.createdAt).toLocaleString() }}
+                        </p>
+                      </template>
+
+                      <div class="prose prose-sm dark:prose-invert max-h-40 overflow-y-auto">
+                        <MDC :value="summary.content.substring(0, 300) + (summary.content.length > 300 ? '...' : '')" />
+                      </div>
+
+                      <template #footer>
+                        <UButton
+                          block
+                          label="View Full Summary"
+                          icon="i-heroicons-arrow-top-right-on-square"
+                          size="xs"
+                          @click="aiAnalysisResult = summary.content"
+                        />
+                      </template>
+                    </UCard>
+                  </div>
+                </div>
+              </Transition>
+            </UContainer>
           </div>
         </template>
       </UTabs>
@@ -967,6 +1143,36 @@ const questionResponses = computed(() => {
   margin: 1.25em 0;
 }
 
+/* Table Styles */
+.ai-summary table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95rem;
+  background: var(--color-gray-50);
+}
+
+.ai-summary th,
+.ai-summary td {
+  padding: 0.75em;
+  border: 1px solid var(--color-gray-300);
+  text-align: left;
+}
+
+.ai-summary th {
+  background: var(--color-gray-100);
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.ai-summary tbody tr:nth-child(odd) {
+  background: var(--color-gray-50);
+}
+
+.ai-summary tbody tr:nth-child(even) {
+  background: var(--color-gray-200);
+}
+
 /* Dark mode adjustments */
 .dark .ai-summary {
   color: var(--color-gray-200);
@@ -989,5 +1195,55 @@ const questionResponses = computed(() => {
 .dark .ai-summary pre {
   background: var(--color-gray-800);
   color: var(--color-gray-100);
+}
+
+.dark .ai-summary table {
+  background: var(--color-gray-900);
+}
+
+.dark .ai-summary th,
+.dark .ai-summary td {
+  border: 1px solid var(--color-gray-700);
+}
+
+.dark .ai-summary th {
+  background: var(--color-gray-800);
+  color: var(--color-gray-100);
+}
+
+.dark .ai-summary tbody tr:nth-child(odd) {
+  background: var(--color-gray-850);
+}
+
+.dark .ai-summary tbody tr:nth-child(even) {
+  background: var(--color-gray-800);
+}
+
+/* Custom scrollbar for summary cards */
+.prose::-webkit-scrollbar {
+  width: 6px;
+}
+
+.prose::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.prose::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.dark .prose::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .prose::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Card hover effect */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1 !important;
 }
 </style>
