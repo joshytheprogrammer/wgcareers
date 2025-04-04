@@ -2,10 +2,13 @@
 import { defineFormKitConfig } from '@formkit/vue'
 import { rootClasses } from './formkit.theme'
 import { generateClasses } from '@formkit/themes'
+import { createMultiStepPlugin } from '@formkit/addons'
+import '@formkit/addons/css/multistep'
  
 export default defineFormKitConfig({
   config: {
     rootClasses,
+    plugins: [createMultiStepPlugin()],
     classes: generateClasses({
       global: { // applies to all input types
         outer: 'max-w-full'

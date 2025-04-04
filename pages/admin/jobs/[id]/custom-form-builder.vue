@@ -207,7 +207,7 @@ onMounted(loadSchema);
 <template>
   <UContainer class="py-8">
     <div class="flex items-center justify-between mb-8">
-      <h1 class="text-2xl font-bold">Form Builder</h1>
+      <h1 class="text-2xl font-bold">Form Builder Demo</h1>
       <UButton
         to="/admin/dashboard"
         icon="i-heroicons-arrow-left"

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@firebase/app-types": "^0.9.3",
+    "@formkit/addons": "^1.6.9",
     "@formkit/nuxt": "^1.6.9",
     "@google/generative-ai": "^0.24.0",
     "@nuxt/icon": "1.11.0",
