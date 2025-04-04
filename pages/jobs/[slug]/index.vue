@@ -27,7 +27,7 @@ useHead(() => ({
     { 
       name: 'description', 
       content: job.value?.description_html 
-        ? stripHtml(job.value.description_html).substring(0, 160) 
+        ? stripHtml(job.value.description_html).substring(0, 155) 
         : 'Explore this job opportunity at Walls and Gates' 
     },
     // Open Graph / Facebook
@@ -39,7 +39,7 @@ useHead(() => ({
     { 
       property: 'og:description', 
       content: job.value?.description_html 
-        ? stripHtml(job.value.description_html).substring(0, 160) 
+        ? stripHtml(job.value.description_html).substring(0, 155) 
         : 'Explore this job opportunity at Walls and Gates' 
     },
     { property: 'og:url', content: `https://careers.wandggroup.com/jobs/${route.params.slug}` },
@@ -52,7 +52,7 @@ useHead(() => ({
     { 
       name: 'twitter:description', 
       content: job.value?.description_html 
-        ? stripHtml(job.value.description_html).substring(0, 160) 
+        ? stripHtml(job.value.description_html).substring(0, 155) 
         : 'Explore this job opportunity at Walls and Gates' 
     },
   ],
@@ -185,9 +185,9 @@ onMounted(async () => {
       <div class="space-y-8">
         <!-- Description -->
         <div>
-          <h2 class="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-200">
+          <!-- <h2 class="text-xl font-semibold mb-3 text-gray-800 dark:text-gray-200">
             Description
-          </h2>
+          </h2> -->
           <div 
             class="prose prose-sm sm:prose-base dark:prose-invert max-w-none editor-div" 
             v-html="job.description_html || '<p>No description provided</p>'"
