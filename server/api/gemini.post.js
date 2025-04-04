@@ -14,7 +14,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" }); // Or your preferred model
+  // const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" }); 
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); 
 
   try {
     const result = await model.generateContent(prompt);

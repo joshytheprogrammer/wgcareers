@@ -20,7 +20,7 @@ const job = ref({
 
 const requirementInput = ref('')
 const benefitInput = ref('')
-const additionalPrompt = ref('Okay so I want to test if the prompt works. Replace all the information about test to Videographer. earning 50k a month')
+const additionalPrompt = ref('')
 const additionalRecommendations = ref('')
 const error = ref('')
 const isLoading = ref(false)
@@ -74,13 +74,13 @@ async function generateWithKelvin() {
       Include the following sections:
       <h2></h2>
         <note>Avoid lists in this section</note>
-        <p>Thanks, and all other formalities relating to job description</p>
+        <note>This should be basically thanks and other applicant related greetings</note>
       
         <h3>Company Overview</h3>
         <p>A brief description of the company, its mission, culture, and why candidates should want to work there.</p>
 
         <h3>Job Summary</h3>
-        <p>A short paragraph outlining the role’s purpose and its impact on the company</p>
+        <p>A short paragraph outlining the role's purpose and its impact on the company</p>
 
         <h3>Required Qualifications </h3>
         <p>The essential skills, education, experience, and certifications needed for the role.</p>
@@ -89,7 +89,7 @@ async function generateWithKelvin() {
         <p>Additional skills or experience that would be beneficial but are not mandatory.</p>
 
         <h3>Equal Opportunity Statement (optional)</h3>
-        <p> A statement affirming the company’s commitment to diversity and inclusion.</p>
+        <p> A statement affirming the company's commitment to diversity and inclusion.</p>
 
         <h3>Work Location & Schedule</h3>
         <p>Whether the job is remote, hybrid, or on-site, plus details on working hours and flexibility</p>
@@ -112,6 +112,7 @@ async function generateWithKelvin() {
 
       <h2>Additional Recommendations</h2>
       <p>Everything below here will be removed by a script and shown to the user so ensure it comes last.</p>
+      <p>Also suggest a more professional description snippet</p>
       <p>It should contain detailed recommendations on what we should consider in other to get the best applicants for the role in this section you can introduce yourself as Kelvin the WG HR Assistant. And then show the recoommendations</p>
     `;
 
@@ -390,7 +391,7 @@ function removeItem(array, index) {
         </UFormField>
 
         <UFormField label="Full Description">
-          <EditorAdminEditor :disabled="isGenerating" v-model="job.description_html" />
+          <EditorAdminEditor v-show="!isGenerating" v-model="job.description_html" />
           <NuxtLink :disabled="isGenerating" @click.prevent="generateWithKelvin" class="font-bold w-full flex justify-end pt-2 cursor-pointer hover:underline">Generate with Kelvin</NuxtLink>
         </UFormField>
 
@@ -478,7 +479,7 @@ function removeItem(array, index) {
 
         <!-- Application Section -->
         <UFormField label="Application Instructions">
-          <EditorAdminEditor v-model="job.application_instructions_html" :disabled="isGenerating" />
+          <EditorAdminEditor v-model="job.application_instructions_html" v-show="!isGenerating" />
         </UFormField>
 
         <!-- Form Actions -->

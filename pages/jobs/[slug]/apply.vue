@@ -5,6 +5,7 @@ import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'fire
 
 const db = useFirestore()
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 
 // State
@@ -14,6 +15,10 @@ const loadError = ref(null)
 const isSubmitting = ref(false)
 const submissionError = ref(null)
 const submissionSuccess = ref(false)
+const isRecaptchaValid = ref(false); // State to track reCAPTCHA validity
+
+// reCAPTCHA v2 Site Key (Replace with your actual key)
+const recaptchaSiteKey = '6LeElwkrAAAAAPVLcy1W9EaBjSgupTNyPFR4LBsO';
 
 // Computed
 const jobId = computed(() => {
@@ -53,8 +58,41 @@ const fetchJob = async () => {
   }
 }
 
+const loadRecaptchaScript = () => {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `https://www.google.com/recaptcha/api.js?onload=vueRecaptchaLoaded&render=explicit`;
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+if (typeof window !== 'undefined') {
+  window.vueRecaptchaLoaded = () => {
+    window.grecaptcha.render('recaptcha-container', {
+      'sitekey': recaptchaSiteKey,
+      'callback': (response) => {
+        isRecaptchaValid.value = !!response;
+      },
+      'expired-callback': () => {
+        isRecaptchaValid.value = false;
+        toast.add({ title: 'Warning', description: 'reCAPTCHA has expired. Please try again.', color: 'orange' });
+      },
+    });
+  };
+}
+
 const submitApplication = async (formData, node) => {
-  if (isSubmitting.value || !job.value?.id) return
+  if (isSubmitting.value || !job.value?.id || !isRecaptchaValid.value) {
+    if (!isRecaptchaValid.value) {
+      submissionError.value = 'Please complete the reCAPTCHA challenge.';
+      toast.add({ title: 'Error', description: submissionError.value, color: 'red' });
+    }
+    return;
+  }
 
   isSubmitting.value = true
   submissionError.value = null
@@ -70,13 +108,16 @@ const submitApplication = async (formData, node) => {
       jobTitle: job.value.title || 'N/A',
       metadata: {
         userAgent: navigator.userAgent || 'N/A',
-        submittedFromUrl: window.location.href
+        submittedFromUrl: window.location.href,
+        recaptchaResponse: window.grecaptcha.getResponse() // Get the response
       }
     })
 
     toast.add({ title: 'Success!', description: 'Application submitted', color: 'green' })
     submissionSuccess.value = true
     node.reset()
+    // Optionally redirect after successful submission
+    // router.push('/');
   } catch (err) {
     submissionError.value = 'Error submitting application'
     toast.add({ title: 'Error', description: err.message, color: 'red' })
@@ -85,7 +126,10 @@ const submitApplication = async (formData, node) => {
   }
 }
 
-onMounted(fetchJob);
+onMounted(async () => {
+  await fetchJob();
+  await loadRecaptchaScript();
+});
 </script>
 <template>
   <UContainer class="py-12 px-4 sm:px-6">
@@ -233,7 +277,7 @@ onMounted(fetchJob);
               v-if="job.formKitSchema"
               :schema="job.formKitSchema"
             />
-
+            <div class="mt-6 flex justify-center" id="recaptcha-container"></div>
             <div class="mt-8 pb-4 text-center">
               <UButton
                 type="submit"
@@ -243,7 +287,7 @@ onMounted(fetchJob);
                 size="xl"
                 color="primary"
                 class="px-8 py-3 mx-auto text-lg font-medium cursor-pointer w-full flex justify-center"
-                :disabled="isSubmitting || !valid"
+                :disabled="isSubmitting || !valid || !isRecaptchaValid"
               />
             </div>
           </FormKit>
