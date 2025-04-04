@@ -151,7 +151,7 @@ onMounted(async () => {
     />
 
     <!-- Content -->
-    <UCard v-if="!isLoading" class="overflow-hidden">
+    <UCard v-if="!isLoading && !error" class="overflow-hidden">
       <template #header>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
           {{ job.title || 'Untitled Position' }}
