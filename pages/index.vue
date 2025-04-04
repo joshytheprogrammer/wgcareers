@@ -133,7 +133,7 @@ useHead({
       content: "Explore job opportunities at Walls and Gates. Apply now to join our team."
     }
   ]
-})
+});
 </script>
 
 <template>

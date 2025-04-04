@@ -17,8 +17,8 @@ function generateSlug(title) {
 
 <template>
   <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
-    <div class="flex justify-between items-start">
-      <div>
+    <div class="flex justify-between gap-4 items-start">
+      <div class="w-fit max-w-[80%] ">
         <NuxtLink :to="`/jobs/${generateSlug(job.title)}`" class="text-xl hover:text-black font-semibold mb-2">{{ job.title }}</NuxtLink>
         <p class="text-gray-600 mb-2">{{ job.company }}</p>
         <div class="flex gap-2 text-sm mb-4">
@@ -27,12 +27,14 @@ function generateSlug(title) {
         </div>
         <p class="text-gray-700">{{ job.description_snippet }}</p>
       </div>
-      <NuxtLink 
+      <UButton 
         :to="`/jobs/${generateSlug(job.title)}`"
-        class="px-4 py-2 bg-black text-white rounded hover:bg-black"
+        color="primary"
+        size="sm"
+        trailing-icon="i-heroicons-arrow-long-right-20-solid"
       >
         View Details
-      </NuxtLink>
+      </UButton>
     </div>
   </div>
 </template>
