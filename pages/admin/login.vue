@@ -71,7 +71,7 @@ async function handleLogin() {
       </template>
 
       <form @submit.prevent="handleLogin" class="space-y-6">
-        <UFormGroup label="Email address" name="email">
+        <UFormField label="Email address" name="email">
           <UInput
             v-model="email"
             type="email"
@@ -81,7 +81,7 @@ async function handleLogin() {
             required
             :disabled="success || isLoading"
           />
-        </UFormGroup>
+        </UFormField>
 
         <UButton
           type="submit"
