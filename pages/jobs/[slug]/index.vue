@@ -20,6 +20,54 @@ const defaultJob = {
   application_instructions_html: ''
 }
 
+// Set SEO meta tags
+useHead(() => ({
+  title: job.value?.title ? `${job.value.title} at ${job.value.company}` : 'Job Listing',
+  meta: [
+    { 
+      name: 'description', 
+      content: job.value?.description_html 
+        ? stripHtml(job.value.description_html).substring(0, 160) 
+        : 'Explore this job opportunity at Walls and Gates' 
+    },
+    // Open Graph / Facebook
+    { property: 'og:type', content: 'website' },
+    { 
+      property: 'og:title', 
+      content: job.value?.title ? `${job.value.title} at ${job.value.company}` : 'Job Opportunity' 
+    },
+    { 
+      property: 'og:description', 
+      content: job.value?.description_html 
+        ? stripHtml(job.value.description_html).substring(0, 160) 
+        : 'Explore this job opportunity at Walls and Gates' 
+    },
+    { property: 'og:url', content: `https://careers.wandggroup.com/jobs/${route.params.slug}` },
+    // Twitter
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { 
+      name: 'twitter:title', 
+      content: job.value?.title ? `${job.value.title} at ${job.value.company}` : 'Job Opportunity' 
+    },
+    { 
+      name: 'twitter:description', 
+      content: job.value?.description_html 
+        ? stripHtml(job.value.description_html).substring(0, 160) 
+        : 'Explore this job opportunity at Walls and Gates' 
+    },
+  ],
+  // Canonical URL
+  link: [
+    { rel: 'canonical', href: `https://careers.wandggroup.com/jobs/${route.params.slug}` }
+  ]
+}))
+
+// Helper function to strip HTML tags for meta descriptions
+function stripHtml(html) {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+
 onMounted(async () => {
   try {
     isLoading.value = true

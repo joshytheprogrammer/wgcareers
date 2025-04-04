@@ -17,6 +17,70 @@ const submissionError = ref(null)
 const submissionSuccess = ref(false)
 const isRecaptchaValid = ref(false); // State to track reCAPTCHA validity
 
+useHead({
+  title: computed(() => 
+    job.value?.title 
+      ? `Apply for ${job.value.title} at ${job.value.company || 'Walls and Gates'}` 
+      : 'Job Application'
+  ),
+  meta: [
+    {
+      name: 'description',
+      content: computed(() => 
+        `Apply for the ${job.value?.title || ''} position${job.value?.location ? ` in ${job.value.location}` : ''}. ` +
+        `Submit your application directly through our secure form.`
+      )
+    },
+    // Open Graph
+    { 
+      property: 'og:title',
+      content: computed(() => 
+        `Apply for ${job.value?.title || 'Position'} | ${job.value?.company || 'Walls and Gates'}`
+      )
+    },
+    { 
+      property: 'og:description',
+      content: computed(() => 
+        `Application form for ${job.value?.title || 'this position'}${job.value?.location ? ` in ${job.value.location}` : ''}`
+      )
+    },
+    { 
+      property: 'og:url',
+      content: computed(() => `https://careers.wandggroup.com/jobs/${route.params.slug}/apply`)
+    },
+    { property: 'og:type', content: 'website' },
+    // Twitter Card
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { 
+      name: 'twitter:title',
+      content: computed(() => 
+        `Apply: ${job.value?.title || 'Position'} @ ${job.value?.company || 'Walls and Gates'}`
+      )
+    },
+    {
+      name: 'twitter:description',
+      content: computed(() => 
+        `Application form for ${job.value?.title || 'this position'}${job.value?.location ? ` in ${job.value.location}` : ''}`
+      )
+    }
+  ],
+  link: [
+    { 
+      rel: 'canonical',
+      href: computed(() => `https://careers.wandggroup.com/jobs/${route.params.slug}/apply`)
+    }
+  ],
+  script: [
+    {
+      src: 'https://www.google.com/recaptcha/api.js',
+      async: true,
+      defer: true,
+      body: true
+    }
+  ]
+})
+
+
 // reCAPTCHA v2 Site Key (Replace with your actual key)
 const recaptchaSiteKey = '6LeElwkrAAAAAPVLcy1W9EaBjSgupTNyPFR4LBsO';
 
