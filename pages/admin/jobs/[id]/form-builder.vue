@@ -14,6 +14,9 @@ const history = ref([]);
 const currentHistoryIndex = ref(-1);
 const MAX_HISTORY_LENGTH = 20;
 
+const generatingTemplate = ref(false);
+const jobTitle = ref('Job');
+
 // Form schema structure
 const formSchema = ref({
   title: '',
@@ -119,6 +122,106 @@ const formKitSchema = computed(() => {
   }).filter(field => field !== null);
 });
 
+const generateFormTemplate = async () => {
+  generatingTemplate.value = true;
+  
+  const prompt = `
+  You are an expert HR specialist and form designer named Kelvin. Given the job title "${jobTitle.value}", please generate relevant fields for a job application form. 
+  
+  Return ONLY an array of field objects in JSON format with these properties for each field:
+  - id: unique snake_case identifier (required)
+  - type: field type (text, email, number, select, etc.)
+  - label: human-readable label
+  - placeholder: example text (optional)
+  - required: boolean
+  - options: array for select/radio/checkbox fields (optional)
+
+  Example output:
+  [
+    {
+      "id": "full_name",
+      "type": "text",
+      "label": "Full Name",
+      "placeholder": "Enter your full name",
+      "required": true
+    },
+    {
+      "id": "years_experience",
+      "type": "number",
+      "label": "Years of Experience",
+      "required": true
+    }
+  ]
+
+  Include fields that would be relevant for a ${jobTitle.value} position in Nigeria. The company is called Walls and Gates.
+  
+  IMPORTANT: Return ONLY the JSON array of fields, nothing else. No markdown, no code formatting, just the raw JSON array.
+  `;
+
+  try {
+    const { data } = await useFetch('/api/gemini', {
+      method: 'POST',
+      body: { prompt }
+    });
+
+    if (data.value) {
+      let fields;
+      try {
+        // Extract the text response from Gemini
+        const responseText = data.value.summary;
+        
+        // Clean the response to extract just the JSON array
+        let jsonString = responseText.trim();
+        
+        // Remove markdown code blocks if present
+        if (jsonString.startsWith('```json')) {
+          jsonString = jsonString.slice(7, -3).trim();
+        } else if (jsonString.startsWith('```')) {
+          jsonString = jsonString.slice(3, -3).trim();
+        }
+        
+        // Parse the JSON
+        fields = JSON.parse(jsonString);
+        
+        if (!Array.isArray(fields)) {
+          throw new Error('AI response must be an array of fields');
+        }
+        
+        // Validate and normalize each field
+        const validFields = fields.map(field => ({
+          id: field.id || `field_${Math.random().toString(36).substr(2, 5)}`,
+          type: fieldTypes.some(t => t.value === field.type) ? field.type : 'text',
+          label: field.label || 'Unlabeled Field',
+          placeholder: field.placeholder || '',
+          required: !!field.required,
+          options: field.options || [],
+          validation: {}
+        }));
+        
+        formSchema.value.fields = validFields;
+        toast.add({ 
+          title: 'Template fields generated!', 
+          description: `Added ${validFields.length} fields`,
+          color: 'green' 
+        });
+        
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        console.log('Raw response:', data.value.summary);
+        throw new Error(`Invalid field format: ${parseError.message}`);
+      }
+    }
+  } catch (error) {
+    toast.add({
+      title: 'Failed to generate fields',
+      description: error.message,
+      color: 'red'
+    });
+  } finally {
+    generatingTemplate.value = false;
+  }
+};
+
 // Version Control Scripts
 const captureSnapshot = () => {
   const currentState = JSON.stringify(formSchema.value);
@@ -181,6 +284,8 @@ const loadSchema = async () => {
     
     if (docSnap.exists()) {
       const data = docSnap.data();
+
+      jobTitle.value = data.title
       
       formSchema.value = {
         title: data.formSchema?.title || data.title + ' Application Form',
@@ -594,7 +699,17 @@ onMounted(loadSchema);
           <div v-if="formSchema.fields.length === 0" class="text-center py-8 text-gray-500">
             <UIcon name="i-heroicons-inbox" class="w-12 h-12 mx-auto mb-4" />
             <p>No fields added yet</p>
-            <p class="text-sm">Click fields from the left to add</p>
+            <p class="text-sm mb-4">Click fields from the left to add</p>
+            <UButton
+              icon="i-heroicons-sparkles"
+              label="Generate Template"
+              color="primary"
+              :loading="generatingTemplate"
+              @click="generateFormTemplate"
+            />
+            <p class="text-xs text-gray-400 mt-2">
+              AI will suggest fields based on "{{ jobTitle }}"
+            </p>
           </div>
 
           <div v-else class="space-y-6">
