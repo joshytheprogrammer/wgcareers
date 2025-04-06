@@ -71,49 +71,44 @@ async function generateWithKelvin() {
       - Leave a space between every section
       - The analysis reflects role-playing instructions: act as a seasoned hiring manager with extensive experience in creating effective job listings.
 
-      Include the following sections:
-      <h2></h2>
-        <note>Avoid lists in this section</note>
-        <note>This should be basically thanks and other applicant related greetings</note>
+      <h2>Company Overview</h2>  
+      <p>Founded in 2015 and headquartered in Lagos, Nigeria, Walls and Gates is a revolutionary branding and advertising company reshaping the industry. We specialize in brand-defining advertising ideas, providing services in outdoor and indoor advertising, billboard branding, transportation advertising, and more. Our mission is to create household names through innovation, technology, and a highly motivated workforce.</p>
+
+      <h2>Job Summary</h2>  
+      <p>A short paragraph outlining the role's purpose and its impact on the company</p>
+
+      <h2>Required Qualifications</h2>  
+      <p>The essential skills, education, experience, and certifications needed for the role.</p>
+
+      <h2>Preferred Qualifications (Optional)</h2>  
+      <p>Additional skills or experience that would be beneficial but are not mandatory.</p>
+
+      <h2>Equal Opportunity Statement (Optional)</h2>  
+      <p>A statement affirming the company's commitment to diversity and inclusion.</p>
+
+      <h2>Work Location & Schedule</h2>  
+      <p>Whether the job is remote, hybrid, or on-site, plus details on working hours and flexibility.</p>
       
-        <h3>Company Overview</h3>
-        <p>A brief description of the company, its mission, culture, and why candidates should want to work there.</p>
-
-        <h3>Job Summary</h3>
-        <p>A short paragraph outlining the role's purpose and its impact on the company</p>
-
-        <h3>Required Qualifications </h3>
-        <p>The essential skills, education, experience, and certifications needed for the role.</p>
-
-        <h3> Preferred Qualifications (optional) </h3>
-        <p>Additional skills or experience that would be beneficial but are not mandatory.</p>
-
-        <h3>Equal Opportunity Statement (optional)</h3>
-        <p> A statement affirming the company's commitment to diversity and inclusion.</p>
-
-        <h3>Work Location & Schedule</h3>
-        <p>Whether the job is remote, hybrid, or on-site, plus details on working hours and flexibility</p>
-      
-      <h2>Requirements</h2>
+      <h2>Requirements</h2>  
       <ul>
         <li>List the essential technical skills, qualifications, and experience needed.</li>
       </ul>
       
-      <h2>Benefits</h2>
+      <h2>Benefits</h2>  
       <ul>
         <li>Describe the key advantages and perks offered by the company.</li>
       </ul>
       
-      <h2>Application Instructions</h2>
-       <p>Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)</p>
-       <note>Make no mention of cover letter. It isn't used as often in Nigeria. We only need the result of the form and the CV in the email or in a google drive link added to the form.</note>
+      <h2>Application Instructions</h2>  
+      <p>Clearly explain how to apply, emphasizing the importance of the application form as the primary determinant for shortlisting candidates. (Note: Applications are submitted via the "Apply Now" button on the website, where candidates complete the form and send their CVs via email. Encourage candidates to put their best foot forward.)</p>
+      <note>Make no mention of cover letter. It isn't used as often in Nigeria. We only need the result of the form and the CV in the email or in a Google Drive link added to the form.</note>
 
-      For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com
+      For inquiries, direct candidates to contact hr.growthdepartment@wandggroup.com.
 
-      <h2>Additional Recommendations</h2>
-      <p>Everything below here will be removed by a script and shown to the user so ensure it comes last.</p>
-      <p>Also suggest a more professional description snippet</p>
-      <p>It should contain detailed recommendations on what we should consider in other to get the best applicants for the role in this section you can introduce yourself as Kelvin the WG HR Assistant. And then show the recoommendations</p>
+      <h2>Additional Recommendations</h2>  
+      <p>Everything below here will be removed by a script and shown to the user, so ensure it comes last.</p>
+      <p>Also suggest a more professional description snippet.</p>
+      <p>It should contain detailed recommendations on what we should consider in order to get the best applicants for the role. In this section, you can introduce yourself as Kelvin, the WG HR Assistant, and then show the recommendations.</p>
     `;
 
     const { data } = await useFetch('/api/gemini', {
@@ -396,7 +391,7 @@ function removeItem(array, index) {
         </UFormField>
 
         <UFormField label="AI Recommendations" class="">
-          <div v-html="additionalRecommendations" class="font-semibold max-w-full p-2 bg-gray-50 leading-4 dark:bg-gray-900 rounded prose prose-sm sm:prose-base dark:prose-invert "></div>
+          <div v-html="additionalRecommendations" class="font-semibold max-w-full p-2 bg-gray-50 leading-8 dark:bg-gray-900 rounded prose prose-sm sm:prose-base dark:prose-invert "></div>
         </UFormField>
 
         <!-- Requirements Section -->
