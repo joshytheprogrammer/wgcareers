@@ -245,6 +245,22 @@ const removeField = (index) => {
   formSchema.value.fields.splice(index, 1);
 };
 
+const moveFieldUp = (index) => {
+  if (index > 0) {
+    const temp = formSchema.value.fields[index];
+    formSchema.value.fields[index] = formSchema.value.fields[index - 1];
+    formSchema.value.fields[index - 1] = temp;
+  }
+};
+
+const moveFieldDown = (index) => {
+  if (index < formSchema.value.fields.length - 1) {
+    const temp = formSchema.value.fields[index];
+    formSchema.value.fields[index] = formSchema.value.fields[index + 1];
+    formSchema.value.fields[index + 1] = temp;
+  }
+};
+
 // Validation management
 const newValidation = ref({});
 
@@ -475,13 +491,27 @@ onMounted(loadSchema);
                   <span class="font-medium">{{ field.label || 'Unlabeled Field' }}</span>
                   <UBadge v-if="field.required" label="Required" size="xs" color="red" />
                 </div>
-                <UButton
-                  icon="i-heroicons-trash"
-                  color="red"
-                  variant="ghost"
-                  size="xs"
-                  @click="removeField(index)"
-                />
+                <div class="flex gap-2">
+                  <UButton 
+                    icon="i-heroicons-arrow-up" 
+                    size="xs" 
+                    @click="moveFieldUp(index)" 
+                    :disabled="index === 0" 
+                  />
+                  <UButton 
+                    icon="i-heroicons-arrow-down" 
+                    size="xs" 
+                    @click="moveFieldDown(index)" 
+                    :disabled="index === formSchema.fields.length - 1" 
+                  />
+                  <UButton
+                    icon="i-heroicons-trash"
+                    color="red"
+                    variant="ghost"
+                    size="xs"
+                    @click="removeField(index)"
+                  />
+                </div>
               </div>
 
               <!-- Field Configuration -->
