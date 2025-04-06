@@ -8,7 +8,11 @@ const route = useRoute()
 const toast = useToast()
 
 const initialLoad = ref(true);
-const lastSavedSchema = ref(null); // Track last saved state
+const lastSavedSchema = ref(null); 
+
+const history = ref([]);
+const currentHistoryIndex = ref(-1);
+const MAX_HISTORY_LENGTH = 20;
 
 // Form schema structure
 const formSchema = ref({
@@ -17,7 +21,7 @@ const formSchema = ref({
   formStatus: 'draft',
   fields: [],
   conditions: []
-})
+});
 
 // Available field types
 const fieldTypes = [
@@ -115,6 +119,60 @@ const formKitSchema = computed(() => {
   }).filter(field => field !== null);
 });
 
+// Version Control Scripts
+const captureSnapshot = () => {
+  const currentState = JSON.stringify(formSchema.value);
+  const lastState = history.value[currentHistoryIndex.value] 
+    ? JSON.stringify(history.value[currentHistoryIndex.value].snapshot) 
+    : null;
+  
+  // Only capture if state actually changed
+  if (currentState !== lastState) {
+    const snapshot = JSON.parse(currentState);
+    const timestamp = new Date().toLocaleTimeString();
+    
+    // If we're not at the end of history, remove future states
+    if (currentHistoryIndex.value < history.value.length - 1) {
+      history.value = history.value.slice(0, currentHistoryIndex.value + 1);
+    }
+    
+    history.value.push({ snapshot, timestamp });
+    currentHistoryIndex.value = history.value.length - 1;
+    
+    // Limit history length
+    if (history.value.length > MAX_HISTORY_LENGTH) {
+      history.value.shift();
+      currentHistoryIndex.value = MAX_HISTORY_LENGTH - 1;
+    }
+  }
+};
+
+// Add undo/redo functions
+const undo = () => {
+  if (currentHistoryIndex.value > 0) {
+    currentHistoryIndex.value--;
+    formSchema.value = JSON.parse(JSON.stringify(history.value[currentHistoryIndex.value].snapshot));
+  }
+};
+
+const redo = () => {
+  if (currentHistoryIndex.value < history.value.length - 1) {
+    currentHistoryIndex.value++;
+    formSchema.value = JSON.parse(JSON.stringify(history.value[currentHistoryIndex.value].snapshot));
+  }
+};
+
+// Add computed properties for undo/redo button states
+const canUndo = computed(() => currentHistoryIndex.value > 0);
+const canRedo = computed(() => currentHistoryIndex.value < history.value.length - 1);
+
+const restoreVersion = (index) => {
+  if (index >= 0 && index < history.value.length && index !== currentHistoryIndex.value) {
+    currentHistoryIndex.value = index;
+    formSchema.value = JSON.parse(JSON.stringify(history.value[index].snapshot));
+  }
+};
+
 // Firebase integration with change detection
 const loadSchema = async () => {
   try {
@@ -124,7 +182,6 @@ const loadSchema = async () => {
     if (docSnap.exists()) {
       const data = docSnap.data();
       
-      // Merge job data with form schema
       formSchema.value = {
         title: data.formSchema?.title || data.title + ' Application Form',
         description: data.formSchema?.description || `We're looking for talented candidates to fill this position. Please complete the application form to be considered for the ${data.title || 'role'} role.`,
@@ -133,7 +190,14 @@ const loadSchema = async () => {
         conditions: data.formSchema?.conditions || []
       };
       
-      lastSavedSchema.value = JSON.stringify(data.formSchema); // Store last saved state
+      lastSavedSchema.value = JSON.stringify(data.formSchema);
+      
+      // Reset history completely when loading new schema
+      history.value = [{
+        snapshot: JSON.parse(JSON.stringify(formSchema.value)),
+        timestamp: new Date().toLocaleTimeString()
+      }];
+      currentHistoryIndex.value = 0;
     }
   } catch (error) {
     toast.add({ 
@@ -309,11 +373,14 @@ const removeCondition = (index) => {
 };
 
 // Watch for changes with efficient saving
+const debouncedCapture = debounce(captureSnapshot, 500);
+
 watch(formSchema, () => {
   if (!initialLoad.value) {
     saveSchema();
+    debouncedCapture();
   }
-}, { deep: true });
+}, { deep: true, flush: 'post' });
 
 // Watch for form schema empty to disabe form
 watch(() => formSchema.value.fields, (fields) => {
@@ -330,13 +397,33 @@ onMounted(loadSchema);
     
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-2xl font-bold">Form Builder</h1>
-      <UButton
-        to="/admin/dashboard"
-        icon="i-heroicons-arrow-left"
-        label="Back to Dashboard"
-        color="gray"
-        variant="ghost"
-      />
+      <div class="flex items-center gap-2">
+        <UButtonGroup size="sm" orientation="horizontal">
+          <UButton
+            icon="i-heroicons-arrow-uturn-left"
+            label="Undo"
+            :disabled="!canUndo"
+            @click="undo"
+            color="gray"
+            variant="outline"
+          />
+          <UButton
+            icon="i-heroicons-arrow-uturn-right"
+            label="Redo"
+            :disabled="!canRedo"
+            @click="redo"
+            color="gray"
+            variant="outline"
+          />
+        </UButtonGroup>
+        <UButton
+          to="/admin/dashboard"
+          icon="i-heroicons-arrow-left"
+          label="Back to Dashboard"
+          color="gray"
+          variant="ghost"
+        />
+      </div>
     </div>
 
     <div v-if="!initialLoad" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -359,6 +446,33 @@ onMounted(loadSchema);
               size="sm"
               class="w-fit"
             />
+          </div>
+        </UCard>
+
+        <UCard >
+          <template #header>
+            <h2 class="font-semibold">Version History</h2>
+          </template>
+          
+          <div v-if="history.length === 0" class="text-center py-4 text-gray-500">
+            <p>No history yet</p>
+          </div>
+          
+          <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+            <div 
+              v-for="(entry, index) in [...history].reverse()" 
+              :key="index"
+              class="p-2 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+              :class="{
+                'bg-primary-50 dark:bg-primary-900': index === history.length - 1 - currentHistoryIndex
+              }"
+              @click="restoreVersion(history.length - 1 - index)"
+            >
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-medium">Version {{ history.length - index }}</span>
+                <span class="text-xs text-gray-500">{{ entry.timestamp }}</span>
+              </div>
+            </div>
           </div>
         </UCard>
 
