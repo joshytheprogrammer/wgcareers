@@ -84,6 +84,60 @@ const getFieldLabel = (fieldId) => {
   return job.value?.formSchema?.fields?.find(f => f.id === fieldId)?.label || fieldId
 }
 
+
+const exportToGoogleDocs = async (summary) => {
+  try {
+    // Create formatted content
+    const docTitle = `Job Analysis - ${summary.title.replace(/[^a-z0-9]/gi, ' ').substring(0, 50)}`;
+    const plainText = summary.content
+      .replace(/^# (.*$)/gm, '\n$1\n==========\n')          // H1
+      .replace(/^## (.*$)/gm, '\n$1\n----------\n')         // H2 
+      .replace(/^### (.*$)/gm, '\n$1\n')                    // H3
+      .replace(/\*\*(.*?)\*\*/g, '$1')                      // Bold (remove formatting)
+      .replace(/\*(.*?)\*/g, '$1')                          // Italics (remove formatting)
+      .replace(/`{3}[\s\S]*?`{3}/g, '')                     // Code blocks
+      .replace(/`(.*?)`/g, '$1')                            // Inline code
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1')                   // Links
+      .replace(/^\s*-\s(.*$)/gm, '• $1')                    // Lists
+      .replace(/\n{3,}/g, '\n\n')                           // Normalize newlines
+      .trim();
+
+    
+    const formattedContent = [
+      `Title: ${summary.title}`,
+      `Created: ${new Date(summary.createdAt).toLocaleString()}`,
+      '',
+      '-------------------------',
+      '',
+      plainText
+    ].join('\n');
+
+    // Copy to clipboard
+    await navigator.clipboard.writeText(formattedContent);
+
+      // Create the Google Docs URL with formatted content
+    const docsUrl = `https://docs.google.com/document/create?title=${encodeURIComponent(docTitle)}}`;
+    
+    // Open in a new tab
+    window.open(docsUrl, '_blank', 'noopener,noreferrer');
+    
+    toast.add({
+      title: 'Google Docs Export',
+      description: 'Opening in Google Docs...',
+      color: 'green',
+      timeout: 3000
+    });
+
+  } catch (error) {
+    toast.add({
+      title: 'Failed to Copy',
+      description: error.message || 'Please copy the content manually',
+      color: 'red',
+      timeout: 5000
+    });
+  }
+};
+
 const formatDisplayValue = (value) => {
   if (value === null || value === undefined) return 'N/A'
   if (typeof value === 'object' && value.toDate) return value.toDate().toLocaleString()
@@ -1104,6 +1158,15 @@ onMounted(() => {
                             color="gray"
                             variant="outline"
                             @click="copyToClipboard(summary.content)"
+                          />
+                          <UButton
+                            label="Export to Doc"
+                            icon="i-simple-icons-googledocs"
+                            size="xs"
+                            color="green"
+                            variant="outline"
+                            @click="exportToGoogleDocs(summary)"
+                            class="flex-1"
                           />
                         </div>
                       </template>
