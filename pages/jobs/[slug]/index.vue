@@ -67,34 +67,31 @@ function stripHtml(html) {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-
-onMounted(async () => {
-  try {
-    isLoading.value = true
-    error.value = ''
-    
-    const q = query(
-      collection(db, 'jobs'),
-      where('slug', '==', route.params.slug)
-    )
-    
-    const querySnapshot = await getDocs(q)
-    
-    if (!querySnapshot.empty) {
-      const doc = querySnapshot.docs[0]
-      // Merge with default job to ensure all fields exist
-      job.value = { ...defaultJob, id: doc.id, ...doc.data() }
-    } else {
-      throw new Error('Job not found')
-    }
-  } catch (err) {
-    error.value = err.message
-    // Set default job for rendering even when error occurs
-    job.value = defaultJob
-  } finally {
-    isLoading.value = false
+try {
+  isLoading.value = true
+  error.value = ''
+  
+  const q = query(
+    collection(db, 'jobs'),
+    where('slug', '==', route.params.slug)
+  )
+  
+  const querySnapshot = await getDocs(q)
+  
+  if (!querySnapshot.empty) {
+    const doc = querySnapshot.docs[0]
+    // Merge with default job to ensure all fields exist
+    job.value = { ...defaultJob, id: doc.id, ...doc.data() }
+  } else {
+    throw new Error('Job not found')
   }
-});
+} catch (err) {
+  error.value = err.message
+  // Set default job for rendering even when error occurs
+  job.value = defaultJob
+} finally {
+  isLoading.value = false
+}
 </script>
 
 <template>

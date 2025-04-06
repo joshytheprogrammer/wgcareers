@@ -190,8 +190,9 @@ const submitApplication = async (formData, node) => {
   }
 }
 
+await fetchJob();
+
 onMounted(async () => {
-  await fetchJob();
   await loadRecaptchaScript();
 });
 </script>
