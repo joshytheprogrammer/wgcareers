@@ -92,6 +92,67 @@ try {
 } finally {
   isLoading.value = false
 }
+
+const shareJob = (platform) => {
+  const baseUrl = `https://careers.wandggroup.com/jobs/${route.params.slug}`;
+  const encodedUrl = encodeURIComponent(baseUrl);
+  const defaultText = 'Check out this job opportunity';
+  const jobText = job.value?.title 
+    ? `Check out this ${job.value.title} position at ${job.value.company}`
+    : defaultText;
+
+  switch (platform) {
+    case 'linkedin':
+      window.open(
+        `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      break;
+
+    case 'twitter':
+      window.open(
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(jobText)}&url=${encodedUrl}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      break;
+
+    case 'facebook':
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+      break;
+
+    case 'email':
+      const subject = job.value?.title 
+        ? `Job Opportunity: ${job.value.title} at ${job.value.company}`
+        : 'Job Opportunity at Walls and Gates';
+      const body = job.value?.description_html 
+        ? `${stripHtml(job.value.description_html).substring(0, 200)}...\n\nRead more: `
+        : `${defaultText}...\n\n`;
+      window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${body}${baseUrl}`)}`;
+      break;
+
+    case 'copy':
+      copyJobLink();
+      break;
+
+    default:
+      console.warn('Unknown share platform:', platform);
+  }
+};
+
+const copyJobLink = async () => {
+  try {
+    await navigator.clipboard.writeText(`https://careers.wandggroup.com/jobs/${route.params.slug}`);
+    useToast().add({ title: 'Link copied to clipboard!', icon: 'i-heroicons-check' });
+  } catch (err) {
+    useToast().add({ title: 'Failed to copy link', color: 'red', icon: 'i-heroicons-exclamation-triangle' });
+  }
+};
 </script>
 
 <template>
@@ -237,6 +298,93 @@ try {
         </div>
       </div>
     </UCard>
+
+    <div v-if="!isLoading && !error" class="mt-12">
+      <UCard>
+        <template #header>
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+            Share this job
+          </h2>
+        </template>
+
+        <div class="flex flex-wrap items-center justify-center gap-4 sm:justify-start">
+          <!-- LinkedIn -->
+          <UButton
+            color="gray"
+            variant="solid"
+            size="xl"
+            class="cursor-pointer"
+            aria-label="Share on LinkedIn"
+            @click="shareJob('linkedin')"
+          >
+            <template #leading>
+              <UIcon name="i-simple-icons-linkedin" class="w-5 h-5 text-[#0A66C2]" />
+            </template>
+            LinkedIn
+          </UButton>
+
+          <!-- Twitter -->
+          <UButton
+            color="gray"
+            variant="solid"
+            size="xl"
+            class="cursor-pointer"
+            aria-label="Share on Twitter"
+            @click="shareJob('twitter')"
+          >
+            <template #leading>
+              <UIcon name="i-simple-icons-x" class="w-5 h-5 text-[#000000] dark:text-[#FFFFFF]" />
+            </template>
+            Twitter
+          </UButton>
+
+          <!-- Facebook -->
+          <UButton
+            color="gray"
+            variant="solid"
+            size="xl"
+            class="cursor-pointer"
+            aria-label="Share on Facebook"
+            @click="shareJob('facebook')"
+          >
+            <template #leading>
+              <UIcon name="i-simple-icons-facebook" class="w-5 h-5 text-[#1877F2]" />
+            </template>
+            Facebook
+          </UButton>
+
+          <!-- Email -->
+          <UButton
+            color="gray"
+            variant="solid"
+            size="xl"
+            class="cursor-pointer"
+            aria-label="Share via Email"
+            @click="shareJob('email')"
+          >
+            <template #leading>
+              <UIcon name="i-heroicons-envelope" class="w-5 h-5 text-primary-500" />
+            </template>
+            Email
+          </UButton>
+
+          <!-- Copy Link -->
+          <UButton
+            color="gray"
+            variant="solid"
+            size="xl"
+            class="cursor-pointer"
+            aria-label="Copy job link"
+            @click="copyJobLink"
+          >
+            <template #leading>
+              <UIcon name="i-heroicons-link" class="w-5 h-5 text-primary-500" />
+            </template>
+            Copy Link
+          </UButton>
+        </div>
+      </UCard>
+    </div>
   </UContainer>
 </template>
 
