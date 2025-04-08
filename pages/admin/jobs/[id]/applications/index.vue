@@ -1,7 +1,7 @@
 <script setup>
 import { useFirestore } from 'vuefire'
 import { collection, query, getDoc, doc, updateDoc, onSnapshot, orderBy } from 'firebase/firestore'
-import { saveAs } from 'file-saver'
+import saveAs from 'file-saver';
 
 const db = useFirestore()
 const route = useRoute()
