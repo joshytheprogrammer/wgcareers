@@ -130,7 +130,7 @@ const generateFormTemplate = async () => {
   
   Return ONLY an array of field objects in JSON format with these properties for each field:
   - id: unique snake_case identifier (required)
-  - type: field type (text, email, number, select, etc.)
+  - type: field type (text, email, number, select, radio, checkbox, textarea, url etc.)
   - label: human-readable label
   - placeholder: example text (optional)
   - required: boolean
